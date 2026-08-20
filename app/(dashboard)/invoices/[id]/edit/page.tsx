@@ -1,207 +1,211 @@
-"use client"
+"use client";
 
-import { use, useEffect, useMemo, useState } from "react"
-import { useRouter } from "next/navigation"
-import { PlusIcon, Trash2Icon } from "lucide-react"
+import { use, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { PlusIcon, Trash2Icon } from "lucide-react";
 
-import { createClient } from "@/lib/supabase/client"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 type Customer = {
-  id: string
-  name: string
-  company_name: string | null
-}
+  id: string;
+  name: string;
+  company_name: string | null;
+};
 
 type InvoiceItem = {
-  id?: string
-  description: string
-  quantity: number
-  unit_price: number
-}
+  id?: string;
+  item_date: string;
+  description: string;
+  quantity: string;
+  unit_price: string;
+};
 
 export default function EditInvoicePage({
   params,
 }: {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
 }) {
-  const { id } = use(params)
+  const { id } = use(params);
 
-  const router = useRouter()
-  const supabase = createClient()
+  const router = useRouter();
+  const supabase = createClient();
 
-  const [businessId, setBusinessId] = useState<string | null>(null)
-  const [customers, setCustomers] = useState<Customer[]>([])
+  const [businessId, setBusinessId] = useState<string | null>(null);
+  const [customers, setCustomers] = useState<Customer[]>([]);
 
-  const [customerId, setCustomerId] = useState("")
-  const [invoiceNumber, setInvoiceNumber] = useState("")
-  const [invoiceDate, setInvoiceDate] = useState("")
-  const [dueDate, setDueDate] = useState("")
-  const [reference, setReference] = useState("")
+  const [customerId, setCustomerId] = useState("");
+  const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [invoiceDate, setInvoiceDate] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [reference, setReference] = useState("");
 
-  const [gstRate, setGstRate] = useState(15)
-  const [gstIncluded, setGstIncluded] = useState(true)
+  const [gstRate, setGstRate] = useState(15);
+  const [gstIncluded, setGstIncluded] = useState(true);
 
-  const [notes, setNotes] = useState("")
-  const [paymentNotes, setPaymentNotes] = useState("")
+  const [notes, setNotes] = useState("");
+  const [paymentNotes, setPaymentNotes] = useState("");
 
-  const [items, setItems] = useState<InvoiceItem[]>([])
+  const [items, setItems] = useState<InvoiceItem[]>([]);
 
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [message, setMessage] = useState("")
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
-    loadInvoice()
-  }, [id])
+    loadInvoice();
+  }, [id]);
 
   const loadInvoice = async () => {
-    setLoading(true)
+    setLoading(true);
 
     const {
       data: { user },
-    } = await supabase.auth.getUser()
+    } = await supabase.auth.getUser();
 
     if (!user) {
-      setMessage("You must be logged in.")
-      setLoading(false)
-      return
+      setMessage("You must be logged in.");
+      setLoading(false);
+      return;
     }
 
     const { data: business } = await supabase
       .from("businesses")
       .select("id")
       .eq("user_id", user.id)
-      .maybeSingle()
+      .maybeSingle();
 
     if (!business) {
-      setMessage("Business profile not found.")
-      setLoading(false)
-      return
+      setMessage("Business profile not found.");
+      setLoading(false);
+      return;
     }
 
-    setBusinessId(business.id)
+    setBusinessId(business.id);
 
     const { data: customerData } = await supabase
       .from("customers")
       .select("id, name, company_name")
       .eq("business_id", business.id)
-      .order("name")
+      .order("name");
 
-    setCustomers(customerData || [])
+    setCustomers(customerData || []);
 
     const { data: invoice, error } = await supabase
       .from("invoices")
-      .select(`
+      .select(
+        `
         *,
         invoice_items (
           id,
+          item_date,
           description,
           quantity,
           unit_price,
           sort_order
         )
-      `)
+      `,
+      )
       .eq("id", id)
-      .single()
+      .single();
 
     if (error || !invoice) {
-      setMessage(error?.message || "Invoice not found.")
-      setLoading(false)
-      return
+      setMessage(error?.message || "Invoice not found.");
+      setLoading(false);
+      return;
     }
 
-    setCustomerId(invoice.customer_id)
-    setInvoiceNumber(invoice.invoice_number)
-    setInvoiceDate(invoice.invoice_date)
-    setDueDate(invoice.due_date || "")
-    setReference(invoice.reference || "")
-    setGstRate(Number(invoice.gst_rate))
-    setGstIncluded(invoice.gst_included)
-    setNotes(invoice.notes || "")
-    setPaymentNotes(invoice.payment_notes || "")
+    setCustomerId(invoice.customer_id);
+    setInvoiceNumber(invoice.invoice_number);
+    setInvoiceDate(invoice.invoice_date);
+    setDueDate(invoice.due_date || "");
+    setReference(invoice.reference || "");
+    setGstRate(Number(invoice.gst_rate));
+    setGstIncluded(invoice.gst_included);
+    setNotes(invoice.notes || "");
+    setPaymentNotes(invoice.payment_notes || "");
 
     const sortedItems = [...(invoice.invoice_items || [])]
       .sort((a, b) => a.sort_order - b.sort_order)
       .map((item) => ({
         id: item.id,
-        description: item.description,
-        quantity: Number(item.quantity),
-        unit_price: Number(item.unit_price),
-      }))
+        item_date: item.item_date || "",
+        description: item.description || "",
+        quantity: String(item.quantity ?? ""),
+        unit_price: String(item.unit_price ?? ""),
+      }));
 
-    setItems(sortedItems)
+    setItems(sortedItems);
 
-    setLoading(false)
-  }
+    setLoading(false);
+  };
 
   const updateItem = (
     index: number,
     field: keyof InvoiceItem,
-    value: string
+    value: string,
   ) => {
-    const updated = [...items]
-
-    if (field === "description") {
-      updated[index].description = value
-    } else if (field === "quantity") {
-      updated[index].quantity = Number(value)
-    } else if (field === "unit_price") {
-      updated[index].unit_price = Number(value)
-    }
-
-    setItems(updated)
-  }
+    setItems((currentItems) =>
+      currentItems.map((item, i) =>
+        i === index
+          ? {
+              ...item,
+              [field]: value,
+            }
+          : item,
+      ),
+    );
+  };
 
   const addItem = () => {
     setItems([
       ...items,
       {
+        item_date: "",
         description: "",
-        quantity: 1,
-        unit_price: 0,
+        quantity: "1",
+        unit_price: "",
       },
-    ])
-  }
+    ]);
+  };
 
   const removeItem = (index: number) => {
-    if (items.length === 1) return
+    if (items.length === 1) return;
 
-    setItems(items.filter((_, i) => i !== index))
-  }
+    setItems(items.filter((_, i) => i !== index));
+  };
 
   const subtotal = useMemo(() => {
-    return items.reduce(
-      (total, item) =>
-        total + item.quantity * item.unit_price,
-      0
-    )
-  }, [items])
+    return items.reduce((total, item) => {
+      const quantity = Number(item.quantity) || 0;
+      const unitPrice = Number(item.unit_price) || 0;
+
+      return total + quantity * unitPrice;
+    }, 0);
+  }, [items]);
 
   const gstAmount = useMemo(() => {
     if (gstIncluded) {
-      return subtotal - subtotal / (1 + gstRate / 100)
+      return subtotal - subtotal / (1 + gstRate / 100);
     }
 
-    return subtotal * (gstRate / 100)
-  }, [subtotal, gstRate, gstIncluded])
+    return subtotal * (gstRate / 100);
+  }, [subtotal, gstRate, gstIncluded]);
 
-  const total = gstIncluded
-    ? subtotal
-    : subtotal + gstAmount
+  const total = gstIncluded ? subtotal : subtotal + gstAmount;
 
   const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (!businessId || !customerId) {
-      setMessage("Business or customer missing.")
-      return
+      setMessage("Business or customer missing.");
+      return;
     }
 
-    setSaving(true)
-    setMessage("")
+    setSaving(true);
+    setMessage("");
 
     const { error: invoiceError } = await supabase
       .from("invoices")
@@ -219,72 +223,72 @@ export default function EditInvoicePage({
         notes: notes || null,
         payment_notes: paymentNotes || null,
       })
-      .eq("id", id)
+      .eq("id", id);
 
     if (invoiceError) {
-      setMessage(invoiceError.message)
-      setSaving(false)
-      return
+      setMessage(invoiceError.message);
+      setSaving(false);
+      return;
     }
 
     // For MVP: delete old items and insert current items again
     const { error: deleteError } = await supabase
       .from("invoice_items")
       .delete()
-      .eq("invoice_id", id)
+      .eq("invoice_id", id);
 
     if (deleteError) {
-      setMessage(deleteError.message)
-      setSaving(false)
-      return
+      setMessage(deleteError.message);
+      setSaving(false);
+      return;
     }
 
-    const newItems = items.map((item, index) => ({
-      invoice_id: id,
-      description: item.description,
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-      amount: item.quantity * item.unit_price,
-      sort_order: index,
-    }))
+    const newItems = items.map((item, index) => {
+      const quantity = Number(item.quantity) || 0;
+      const unitPrice = Number(item.unit_price) || 0;
+
+      return {
+        invoice_id: id,
+        item_date: item.item_date || null,
+        description: item.description.trim(),
+        quantity,
+        unit_price: unitPrice,
+        amount: quantity * unitPrice,
+        sort_order: index,
+      };
+    });
 
     const { error: itemsError } = await supabase
       .from("invoice_items")
-      .insert(newItems)
+      .insert(newItems);
 
     if (itemsError) {
-      setMessage(itemsError.message)
-      setSaving(false)
-      return
+      setMessage(itemsError.message);
+      setSaving(false);
+      return;
     }
 
-    setSaving(false)
+    setSaving(false);
 
-    router.push(`/invoices/${id}`)
-    router.refresh()
-  }
+    router.push(`/invoices/${id}`);
+    router.refresh();
+  };
 
   if (loading) {
-    return <div className="p-6">Loading invoice...</div>
+    return <div className="p-6">Loading invoice...</div>;
   }
 
   return (
     <div className="mx-auto max-w-5xl p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">
-          Edit Invoice
-        </h1>
+        <h1 className="text-2xl font-bold">Edit Invoice</h1>
 
         <p className="text-sm text-muted-foreground">
           Update invoice details and items.
         </p>
       </div>
 
-      {message && (
-        <p className="mb-4 text-sm text-destructive">
-          {message}
-        </p>
-      )}
+      {message && <p className="mb-4 text-sm text-destructive">{message}</p>}
 
       <form onSubmit={handleUpdate} className="space-y-8">
         <div className="grid gap-6 rounded-lg border p-6 md:grid-cols-2">
@@ -293,16 +297,11 @@ export default function EditInvoicePage({
 
             <select
               value={customerId}
-              onChange={(e) =>
-                setCustomerId(e.target.value)
-              }
+              onChange={(e) => setCustomerId(e.target.value)}
               className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
             >
               {customers.map((customer) => (
-                <option
-                  key={customer.id}
-                  value={customer.id}
-                >
+                <option key={customer.id} value={customer.id}>
                   {customer.company_name || customer.name}
                 </option>
               ))}
@@ -314,9 +313,7 @@ export default function EditInvoicePage({
 
             <Input
               value={invoiceNumber}
-              onChange={(e) =>
-                setInvoiceNumber(e.target.value)
-              }
+              onChange={(e) => setInvoiceNumber(e.target.value)}
             />
           </div>
 
@@ -326,9 +323,7 @@ export default function EditInvoicePage({
             <Input
               type="date"
               value={invoiceDate}
-              onChange={(e) =>
-                setInvoiceDate(e.target.value)
-              }
+              onChange={(e) => setInvoiceDate(e.target.value)}
             />
           </div>
 
@@ -338,9 +333,7 @@ export default function EditInvoicePage({
             <Input
               type="date"
               value={dueDate}
-              onChange={(e) =>
-                setDueDate(e.target.value)
-              }
+              onChange={(e) => setDueDate(e.target.value)}
             />
           </div>
 
@@ -349,9 +342,7 @@ export default function EditInvoicePage({
 
             <Input
               value={reference}
-              onChange={(e) =>
-                setReference(e.target.value)
-              }
+              onChange={(e) => setReference(e.target.value)}
             />
           </div>
         </div>
@@ -362,11 +353,7 @@ export default function EditInvoicePage({
               Invoice Items
             </h2>
 
-            <Button
-              type="button"
-              variant="outline"
-              onClick={addItem}
-            >
+            <Button type="button" variant="outline" onClick={addItem}>
               <PlusIcon className="mr-2 size-4" />
               Add Item
             </Button>
@@ -376,19 +363,26 @@ export default function EditInvoicePage({
             {items.map((item, index) => (
               <div
                 key={index}
-                className="grid items-end gap-3 md:grid-cols-[1fr_120px_150px_150px_50px]"
+                className="grid items-end gap-3 md:grid-cols-[150px_1fr_100px_130px_130px_50px]"
               >
+                <div className="space-y-2">
+                  <Label>Date</Label>
+
+                  <Input
+                    type="date"
+                    value={item.item_date}
+                    onChange={(e) =>
+                      updateItem(index, "item_date", e.target.value)
+                    }
+                  />
+                </div>
                 <div className="space-y-2">
                   <Label>Description</Label>
 
                   <Input
                     value={item.description}
                     onChange={(e) =>
-                      updateItem(
-                        index,
-                        "description",
-                        e.target.value
-                      )
+                      updateItem(index, "description", e.target.value)
                     }
                   />
                 </div>
@@ -399,14 +393,10 @@ export default function EditInvoicePage({
                   <Input
                     type="number"
                     min="0"
-                    step="0.01"
+                    step="1"
                     value={item.quantity}
                     onChange={(e) =>
-                      updateItem(
-                        index,
-                        "quantity",
-                        e.target.value
-                      )
+                      updateItem(index, "quantity", e.target.value)
                     }
                   />
                 </div>
@@ -420,11 +410,7 @@ export default function EditInvoicePage({
                     step="0.01"
                     value={item.unit_price}
                     onChange={(e) =>
-                      updateItem(
-                        index,
-                        "unit_price",
-                        e.target.value
-                      )
+                      updateItem(index, "unit_price", e.target.value)
                     }
                   />
                 </div>
@@ -434,7 +420,8 @@ export default function EditInvoicePage({
 
                   <Input
                     value={`$${(
-                      item.quantity * item.unit_price
+                      (Number(item.quantity) || 0) *
+                      (Number(item.unit_price) || 0)
                     ).toFixed(2)}`}
                     disabled
                   />
@@ -461,9 +448,7 @@ export default function EditInvoicePage({
             <Input
               type="number"
               value={gstRate}
-              onChange={(e) =>
-                setGstRate(Number(e.target.value))
-              }
+              onChange={(e) => setGstRate(Number(e.target.value))}
             />
           </div>
 
@@ -471,9 +456,7 @@ export default function EditInvoicePage({
             <input
               type="checkbox"
               checked={gstIncluded}
-              onChange={(e) =>
-                setGstIncluded(e.target.checked)
-              }
+              onChange={(e) => setGstIncluded(e.target.checked)}
             />
 
             <Label>Prices include GST</Label>
@@ -503,9 +486,7 @@ export default function EditInvoicePage({
 
             <textarea
               value={notes}
-              onChange={(e) =>
-                setNotes(e.target.value)
-              }
+              onChange={(e) => setNotes(e.target.value)}
               className="min-h-24 w-full rounded-md border bg-transparent p-3 text-sm"
             />
           </div>
@@ -515,9 +496,7 @@ export default function EditInvoicePage({
 
             <textarea
               value={paymentNotes}
-              onChange={(e) =>
-                setPaymentNotes(e.target.value)
-              }
+              onChange={(e) => setPaymentNotes(e.target.value)}
               className="min-h-24 w-full rounded-md border bg-transparent p-3 text-sm"
             />
           </div>
@@ -530,5 +509,5 @@ export default function EditInvoicePage({
         </div>
       </form>
     </div>
-  )
+  );
 }

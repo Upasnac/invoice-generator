@@ -1,17 +1,13 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import {
-  PencilIcon,
-  PlusIcon,
-  Trash2Icon,
-} from "lucide-react"
+import { useEffect, useState } from "react";
+import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 
-import { createClient } from "@/lib/supabase/client"
+import { createClient } from "@/lib/supabase/client";
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 import {
   Dialog,
@@ -21,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 
 import {
   Table,
@@ -30,85 +26,78 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 
 type Customer = {
-  id: string
-  business_id: string
-  name: string
-  company_name: string | null
-  email: string | null
-  phone: string | null
-  address_line1: string | null
-  address_line2: string | null
-  city: string | null
-  postcode: string | null
-  country: string | null
-}
+  id: string;
+  business_id: string;
+  name: string;
+  company_name: string | null;
+  email: string | null;
+  phone: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  city: string | null;
+  postcode: string | null;
+  country: string | null;
+};
 
 export default function CustomersPage() {
-  const supabase = createClient()
+  const supabase = createClient();
 
-  const [customers, setCustomers] = useState<Customer[]>([])
-  const [businessId, setBusinessId] = useState<string | null>(null)
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [businessId, setBusinessId] = useState<string | null>(null);
 
-  const [editingCustomer, setEditingCustomer] =
-    useState<Customer | null>(null)
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
 
-  const [open, setOpen] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const [message, setMessage] = useState("")
-  const [formError, setFormError] = useState("")
+  const [message, setMessage] = useState("");
+  const [formError, setFormError] = useState("");
 
-  const [name, setName] = useState("")
-  const [companyName, setCompanyName] = useState("")
-  const [email, setEmail] = useState("")
-  const [phone, setPhone] = useState("")
-  const [addressLine1, setAddressLine1] = useState("")
-  const [addressLine2, setAddressLine2] = useState("")
-  const [city, setCity] = useState("")
-  const [postcode, setPostcode] = useState("")
-  const [country, setCountry] = useState("New Zealand")
+  const [name, setName] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [addressLine1, setAddressLine1] = useState("");
+  const [addressLine2, setAddressLine2] = useState("");
+  const [city, setCity] = useState("");
+  const [postcode, setPostcode] = useState("");
+  const [country, setCountry] = useState("New Zealand");
 
   useEffect(() => {
-    loadCustomers()
-  }, [])
+    loadCustomers();
+  }, []);
 
   const loadCustomers = async () => {
-    setLoading(true)
-    setMessage("")
+    setLoading(true);
+    setMessage("");
 
     const {
       data: { user },
-    } = await supabase.auth.getUser()
+    } = await supabase.auth.getUser();
 
     if (!user) {
-      setMessage("You must be logged in.")
-      setLoading(false)
-      return
+      setMessage("You must be logged in.");
+      setLoading(false);
+      return;
     }
 
-    const {
-      data: business,
-      error: businessError,
-    } = await supabase
+    const { data: business, error: businessError } = await supabase
       .from("businesses")
       .select("id")
       .eq("user_id", user.id)
-      .maybeSingle()
+      .maybeSingle();
 
     if (businessError || !business) {
-      setMessage(
-        businessError?.message ||
-          "Business profile not found."
-      )
-      setLoading(false)
-      return
+      setMessage(businessError?.message || "Business profile not found.");
+      setLoading(false);
+      return;
     }
 
-    setBusinessId(business.id)
+    setBusinessId(business.id);
 
     const { data, error } = await supabase
       .from("customers")
@@ -116,68 +105,64 @@ export default function CustomersPage() {
       .eq("business_id", business.id)
       .order("created_at", {
         ascending: false,
-      })
+      });
 
     if (error) {
-      setMessage(error.message)
-      setCustomers([])
+      setMessage(error.message);
+      setCustomers([]);
     } else {
-      setCustomers(data || [])
+      setCustomers(data || []);
     }
 
-    setLoading(false)
-  }
+    setLoading(false);
+  };
 
   const resetForm = () => {
-    setName("")
-    setCompanyName("")
-    setEmail("")
-    setPhone("")
-    setAddressLine1("")
-    setAddressLine2("")
-    setCity("")
-    setPostcode("")
-    setCountry("New Zealand")
+    setName("");
+    setCompanyName("");
+    setEmail("");
+    setPhone("");
+    setAddressLine1("");
+    setAddressLine2("");
+    setCity("");
+    setPostcode("");
+    setCountry("New Zealand");
 
-    setEditingCustomer(null)
-    setFormError("")
-  }
+    setEditingCustomer(null);
+    setFormError("");
+  };
 
   const openAddCustomer = () => {
-    resetForm()
-    setOpen(true)
-  }
+    resetForm();
+    setOpen(true);
+  };
 
-  const openEditCustomer = (
-    customer: Customer
-  ) => {
-    setEditingCustomer(customer)
+  const openEditCustomer = (customer: Customer) => {
+    setEditingCustomer(customer);
 
-    setName(customer.name || "")
-    setCompanyName(customer.company_name || "")
-    setEmail(customer.email || "")
-    setPhone(customer.phone || "")
-    setAddressLine1(customer.address_line1 || "")
-    setAddressLine2(customer.address_line2 || "")
-    setCity(customer.city || "")
-    setPostcode(customer.postcode || "")
-    setCountry(customer.country || "New Zealand")
+    setName(customer.name || "");
+    setCompanyName(customer.company_name || "");
+    setEmail(customer.email || "");
+    setPhone(customer.phone || "");
+    setAddressLine1(customer.address_line1 || "");
+    setAddressLine2(customer.address_line2 || "");
+    setCity(customer.city || "");
+    setPostcode(customer.postcode || "");
+    setCountry(customer.country || "New Zealand");
 
-    setFormError("")
-    setOpen(true)
-  }
+    setFormError("");
+    setOpen(true);
+  };
 
-  const handleSaveCustomer = async (
-    e: React.FormEvent
-  ) => {
-    e.preventDefault()
+  const handleSaveCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-    setFormError("")
-    setMessage("")
+    setFormError("");
+    setMessage("");
 
     if (!businessId) {
-      setFormError("Business profile not found.")
-      return
+      setFormError("Business profile not found.");
+      return;
     }
 
     // -----------------------------
@@ -185,88 +170,65 @@ export default function CustomersPage() {
     // -----------------------------
 
     if (!name.trim()) {
-      setFormError("Customer name is required.")
-      return
+      setFormError("Customer name is required.");
+      return;
     }
 
     if (name.trim().length < 2) {
-      setFormError(
-        "Customer name must be at least 2 characters."
-      )
-      return
+      setFormError("Customer name must be at least 2 characters.");
+      return;
     }
 
     if (!companyName.trim()) {
-      setFormError("Company name is required.")
-      return
+      setFormError("Company name is required.");
+      return;
     }
 
-    if (!email.trim()) {
-      setFormError("Email address is required.")
-      return
-    }
-
-    const emailPattern =
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!emailPattern.test(email.trim())) {
-      setFormError(
-        "Please enter a valid email address."
-      )
-      return
+      setFormError("Please enter a valid email address.");
+      return;
     }
 
-    if (!phone.trim()) {
-      setFormError("Phone number is required.")
-      return
-    }
-
-    const phoneDigits =
-      phone.replace(/\D/g, "")
+    const phoneDigits = phone.replace(/\D/g, "");
 
     if (phoneDigits.length < 7) {
-      setFormError(
-        "Please enter a valid phone number."
-      )
-      return
+      setFormError("Please enter a valid phone number.");
+      return;
     }
 
     if (!addressLine1.trim()) {
-      setFormError(
-        "Address Line 1 is required."
-      )
-      return
+      setFormError("Address Line 1 is required.");
+      return;
     }
 
     // Address Line 2 is optional
 
     if (!city.trim()) {
-      setFormError("City is required.")
-      return
+      setFormError("City is required.");
+      return;
     }
 
     if (!postcode.trim()) {
-      setFormError("Postcode is required.")
-      return
+      setFormError("Postcode is required.");
+      return;
     }
 
     if (
-      country.trim().toLowerCase() ===
-        "new zealand" &&
+      country.trim().toLowerCase() === "new zealand" &&
       !/^\d{4}$/.test(postcode.trim())
     ) {
-      setFormError(
-        "New Zealand postcodes must contain 4 digits."
-      )
-      return
+      setFormError("New Zealand postcodes must contain 4 digits.");
+      return;
     }
 
     if (!country.trim()) {
-      setFormError("Country is required.")
-      return
+      setFormError("Country is required.");
+      return;
     }
 
-    setSaving(true)
+    setSaving(true);
 
     const customerData = {
       business_id: businessId,
@@ -277,80 +239,66 @@ export default function CustomersPage() {
       phone: phone.trim(),
       address_line1: addressLine1.trim(),
 
-      address_line2:
-        addressLine2.trim() || null,
+      address_line2: addressLine2.trim() || null,
 
       city: city.trim(),
       postcode: postcode.trim(),
       country: country.trim(),
-    }
+    };
 
-    let error
+    let error;
 
     if (editingCustomer) {
       const result = await supabase
         .from("customers")
         .update(customerData)
-        .eq(
-          "id",
-          editingCustomer.id
-        )
+        .eq("id", editingCustomer.id);
 
-      error = result.error
+      error = result.error;
     } else {
-      const result = await supabase
-        .from("customers")
-        .insert(customerData)
+      const result = await supabase.from("customers").insert(customerData);
 
-      error = result.error
+      error = result.error;
     }
 
     if (error) {
-      setFormError(error.message)
-      setSaving(false)
-      return
+      setFormError(error.message);
+      setSaving(false);
+      return;
     }
 
-    resetForm()
-    setOpen(false)
-    setSaving(false)
+    resetForm();
+    setOpen(false);
+    setSaving(false);
 
-    await loadCustomers()
-  }
+    await loadCustomers();
+  };
 
-  const handleDelete = async (
-    id: string
-  ) => {
-    const confirmed =
-      window.confirm(
-        "Are you sure you want to delete this customer?"
-      )
+  const handleDelete = async (id: string) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this customer?",
+    );
 
-    if (!confirmed) return
+    if (!confirmed) return;
 
-    setMessage("")
+    setMessage("");
 
-    const { error } = await supabase
-      .from("customers")
-      .delete()
-      .eq("id", id)
+    const { error } = await supabase.from("customers").delete().eq("id", id);
 
     if (error) {
-      setMessage(error.message)
-      return
+      setMessage(error.message);
+      return;
     }
 
-    await loadCustomers()
-  }
+    await loadCustomers();
+  };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       {/* Header */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            Customers
-          </h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Customers</h1>
 
           <p className="mt-1 text-sm text-muted-foreground">
             Manage customers used on your invoices.
@@ -360,18 +308,16 @@ export default function CustomersPage() {
         <Dialog
           open={open}
           onOpenChange={(value) => {
-            setOpen(value)
+            setOpen(value);
 
             if (!value) {
-              resetForm()
+              resetForm();
             }
           }}
         >
           <DialogTrigger
             render={
-              <Button
-                onClick={openAddCustomer}
-              >
+              <Button onClick={openAddCustomer}>
                 <PlusIcon className="mr-2 size-4" />
                 Add Customer
               </Button>
@@ -381,9 +327,7 @@ export default function CustomersPage() {
           <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>
-                {editingCustomer
-                  ? "Edit Customer"
-                  : "Add Customer"}
+                {editingCustomer ? "Edit Customer" : "Add Customer"}
               </DialogTitle>
 
               <DialogDescription>
@@ -404,34 +348,24 @@ export default function CustomersPage() {
               <div className="grid gap-4 py-4">
                 {/* Customer Name */}
                 <div className="grid gap-2">
-                  <Label htmlFor="name">
-                    Customer Name *
-                  </Label>
+                  <Label htmlFor="name">Customer Name *</Label>
 
                   <Input
                     id="name"
                     value={name}
-                    onChange={(e) =>
-                      setName(e.target.value)
-                    }
+                    onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. Alex Johnson"
                   />
                 </div>
 
                 {/* Company Name */}
                 <div className="grid gap-2">
-                  <Label htmlFor="company">
-                    Company Name *
-                  </Label>
+                  <Label htmlFor="company">Company Name *</Label>
 
                   <Input
                     id="company"
                     value={companyName}
-                    onChange={(e) =>
-                      setCompanyName(
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => setCompanyName(e.target.value)}
                     placeholder="e.g. ABC Solutions Ltd"
                   />
                 </div>
@@ -439,36 +373,24 @@ export default function CustomersPage() {
                 {/* Email + Phone */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label htmlFor="email">
-                      Email *
-                    </Label>
+                    <Label htmlFor="email">Email *</Label>
 
                     <Input
                       id="email"
                       type="email"
                       value={email}
-                      onChange={(e) =>
-                        setEmail(
-                          e.target.value
-                        )
-                      }
+                      onChange={(e) => setEmail(e.target.value)}
                       placeholder="e.g. alex@example.com"
                     />
                   </div>
 
                   <div className="grid gap-2">
-                    <Label htmlFor="phone">
-                      Phone *
-                    </Label>
+                    <Label htmlFor="phone">Phone *</Label>
 
                     <Input
                       id="phone"
                       value={phone}
-                      onChange={(e) =>
-                        setPhone(
-                          e.target.value
-                        )
-                      }
+                      onChange={(e) => setPhone(e.target.value)}
                       placeholder="e.g. 021 123 4567"
                     />
                   </div>
@@ -476,76 +398,50 @@ export default function CustomersPage() {
 
                 {/* Address Line 1 */}
                 <div className="grid gap-2">
-                  <Label htmlFor="address1">
-                    Address Line 1 *
-                  </Label>
+                  <Label htmlFor="address1">Address Line 1 *</Label>
 
                   <Input
                     id="address1"
                     value={addressLine1}
-                    onChange={(e) =>
-                      setAddressLine1(
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => setAddressLine1(e.target.value)}
                     placeholder="e.g. 25 Example Street"
                   />
                 </div>
 
                 {/* Address Line 2 */}
                 <div className="grid gap-2">
-                  <Label htmlFor="address2">
-                    Address Line 2
-                  </Label>
+                  <Label htmlFor="address2">Address Line 2</Label>
 
                   <Input
                     id="address2"
                     value={addressLine2}
-                    onChange={(e) =>
-                      setAddressLine2(
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => setAddressLine2(e.target.value)}
                     placeholder="e.g. Unit 4"
                   />
 
-                  <p className="text-xs text-muted-foreground">
-                    Optional
-                  </p>
+                  <p className="text-xs text-muted-foreground">Optional</p>
                 </div>
 
                 {/* City + Postcode */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label htmlFor="city">
-                      City *
-                    </Label>
+                    <Label htmlFor="city">City *</Label>
 
                     <Input
                       id="city"
                       value={city}
-                      onChange={(e) =>
-                        setCity(
-                          e.target.value
-                        )
-                      }
+                      onChange={(e) => setCity(e.target.value)}
                       placeholder="e.g. Christchurch"
                     />
                   </div>
 
                   <div className="grid gap-2">
-                    <Label htmlFor="postcode">
-                      Postcode *
-                    </Label>
+                    <Label htmlFor="postcode">Postcode *</Label>
 
                     <Input
                       id="postcode"
                       value={postcode}
-                      onChange={(e) =>
-                        setPostcode(
-                          e.target.value
-                        )
-                      }
+                      onChange={(e) => setPostcode(e.target.value)}
                       placeholder="e.g. 8011"
                       inputMode="numeric"
                     />
@@ -554,18 +450,12 @@ export default function CustomersPage() {
 
                 {/* Country */}
                 <div className="grid gap-2">
-                  <Label htmlFor="country">
-                    Country *
-                  </Label>
+                  <Label htmlFor="country">Country *</Label>
 
                   <Input
                     id="country"
                     value={country}
-                    onChange={(e) =>
-                      setCountry(
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => setCountry(e.target.value)}
                     placeholder="e.g. New Zealand"
                   />
                 </div>
@@ -576,22 +466,19 @@ export default function CustomersPage() {
                   type="button"
                   variant="outline"
                   onClick={() => {
-                    setOpen(false)
-                    resetForm()
+                    setOpen(false);
+                    resetForm();
                   }}
                 >
                   Cancel
                 </Button>
 
-                <Button
-                  type="submit"
-                  disabled={saving}
-                >
+                <Button type="submit" disabled={saving}>
                   {saving
                     ? "Saving..."
                     : editingCustomer
-                    ? "Update Customer"
-                    : "Save Customer"}
+                      ? "Update Customer"
+                      : "Save Customer"}
                 </Button>
               </DialogFooter>
             </form>
@@ -617,9 +504,7 @@ export default function CustomersPage() {
               <TableHead>Phone</TableHead>
               <TableHead>City</TableHead>
 
-              <TableHead className="text-right">
-                Actions
-              </TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
 
@@ -645,25 +530,15 @@ export default function CustomersPage() {
             ) : (
               customers.map((customer) => (
                 <TableRow key={customer.id}>
-                  <TableCell className="font-medium">
-                    {customer.name}
-                  </TableCell>
+                  <TableCell className="font-medium">{customer.name}</TableCell>
 
-                  <TableCell>
-                    {customer.company_name || "—"}
-                  </TableCell>
+                  <TableCell>{customer.company_name || "—"}</TableCell>
 
-                  <TableCell>
-                    {customer.email || "—"}
-                  </TableCell>
+                  <TableCell>{customer.email || "—"}</TableCell>
 
-                  <TableCell>
-                    {customer.phone || "—"}
-                  </TableCell>
+                  <TableCell>{customer.phone || "—"}</TableCell>
 
-                  <TableCell>
-                    {customer.city || "—"}
-                  </TableCell>
+                  <TableCell>{customer.city || "—"}</TableCell>
 
                   <TableCell>
                     <div className="flex justify-end gap-2">
@@ -672,11 +547,7 @@ export default function CustomersPage() {
                         variant="outline"
                         size="icon"
                         title="Edit customer"
-                        onClick={() =>
-                          openEditCustomer(
-                            customer
-                          )
-                        }
+                        onClick={() => openEditCustomer(customer)}
                       >
                         <PencilIcon className="size-4" />
                       </Button>
@@ -686,11 +557,7 @@ export default function CustomersPage() {
                         variant="outline"
                         size="icon"
                         title="Delete customer"
-                        onClick={() =>
-                          handleDelete(
-                            customer.id
-                          )
-                        }
+                        onClick={() => handleDelete(customer.id)}
                       >
                         <Trash2Icon className="size-4" />
                       </Button>
@@ -703,5 +570,5 @@ export default function CustomersPage() {
         </Table>
       </div>
     </div>
-  )
+  );
 }

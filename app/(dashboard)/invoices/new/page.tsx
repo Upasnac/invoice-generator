@@ -1,324 +1,344 @@
-"use client"
+"use client";
 
-import { useEffect, useMemo, useState } from "react"
-import { PlusIcon, Trash2Icon } from "lucide-react"
-import { createClient } from "@/lib/supabase/client"
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { PlusIcon, Trash2Icon } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
 type Customer = {
-  id: string
-  name: string
-  company_name: string | null
-}
+  id: string;
+  name: string;
+  company_name: string | null;
+};
 
 type InvoiceItem = {
-  description: string
-  quantity: number
-  unit_price: number
-}
+  id?: string;
+  item_date: string;
+  description: string;
+  quantity: string;
+  unit_price: string;
+};
 
 export default function NewInvoicePage() {
-  const router = useRouter()
-  const supabase = createClient()
+  const router = useRouter();
+  const supabase = createClient();
 
-  const [businessId, setBusinessId] = useState<string | null>(null)
-  const [customers, setCustomers] = useState<Customer[]>([])
+  const [businessId, setBusinessId] = useState<string | null>(null);
+  const [customers, setCustomers] = useState<Customer[]>([]);
 
-  const [customerId, setCustomerId] = useState("")
-  const [invoiceNumber, setInvoiceNumber] = useState("")
-  const [invoiceDate, setInvoiceDate] = useState("")
-  const [dueDate, setDueDate] = useState("")
-  const [reference, setReference] = useState("")
+  const [customerId, setCustomerId] = useState("");
+  const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [invoiceDate, setInvoiceDate] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [reference, setReference] = useState("");
 
-  const [gstRate, setGstRate] = useState(15)
-  const [gstIncluded, setGstIncluded] = useState(true)
+  const [gstRate, setGstRate] = useState(15);
+  const [gstIncluded, setGstIncluded] = useState(true);
 
-  const [notes, setNotes] = useState("")
-  const [paymentNotes, setPaymentNotes] = useState("")
+  const [notes, setNotes] = useState("");
+  const [paymentNotes, setPaymentNotes] = useState("");
 
   const [items, setItems] = useState<InvoiceItem[]>([
     {
+      item_date: "",
       description: "",
-      quantity: 1,
-      unit_price: 0,
+      quantity: "",
+      unit_price: "",
     },
-  ])
+  ]);
 
-  const [saving, setSaving] = useState(false)
-  const [message, setMessage] = useState("")
-const [messageType, setMessageType] = useState<"error" | "success">("error")
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState<"error" | "success">("error");
+
   useEffect(() => {
-    loadInitialData()
-  }, [])
+    loadInitialData();
+  }, []);
+
+  const showError = (errorMessage: string) => {
+    setMessage(errorMessage);
+    setMessageType("error");
+
+    setTimeout(() => {
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    }, 100);
+  };
 
   const loadInitialData = async () => {
     const {
       data: { user },
-    } = await supabase.auth.getUser()
+    } = await supabase.auth.getUser();
 
     if (!user) {
-      setMessage("You must be logged in.")
-      return
+      showError("You must be logged in.");
+      return;
     }
 
     const { data: business } = await supabase
       .from("businesses")
       .select("id")
       .eq("user_id", user.id)
-      .maybeSingle()
+      .maybeSingle();
 
     if (!business) {
-      setMessage("Business profile not found.")
-      return
+      showError("Business profile not found.");
+      return;
     }
 
-    setBusinessId(business.id)
+    setBusinessId(business.id);
 
     const { data: customerData } = await supabase
       .from("customers")
       .select("id, name, company_name")
       .eq("business_id", business.id)
-      .order("name")
+      .order("name");
 
-    setCustomers(customerData || [])
+    setCustomers(customerData || []);
 
-    const today = new Date()
-    const dateString = today.toISOString().split("T")[0]
+    const today = new Date();
+    const dateString = today.toISOString().split("T")[0];
 
-    setInvoiceDate(dateString)
+    setInvoiceDate(dateString);
 
-    const due = new Date()
-    due.setDate(due.getDate() + 7)
+    const due = new Date();
+    due.setDate(due.getDate() + 7);
 
-    setDueDate(due.toISOString().split("T")[0])
-const { data: nextNumber, error: numberError } =
-  await supabase.rpc("get_next_invoice_number", {
-    p_business_id: business.id,
-  })
+    setDueDate(due.toISOString().split("T")[0]);
 
-if (numberError) {
-  showError(numberError.message)
-  return
-}
+    const { data: nextNumber, error: numberError } = await supabase.rpc(
+      "get_next_invoice_number",
+      {
+        p_business_id: business.id,
+      },
+    );
 
-setInvoiceNumber(nextNumber)
+    if (numberError) {
+      showError(numberError.message);
+      return;
+    }
 
-  }
+    setInvoiceNumber(nextNumber || "");
+  };
 
   const updateItem = (
     index: number,
     field: keyof InvoiceItem,
-    value: string
+    value: string,
   ) => {
-    const updatedItems = [...items]
-
-    if (field === "description") {
-      updatedItems[index][field] = value
-    } else {
-      updatedItems[index][field] = Number(value)
-    }
-
-    setItems(updatedItems)
-  }
+    setItems((currentItems) =>
+      currentItems.map((item, itemIndex) =>
+        itemIndex === index
+          ? {
+              ...item,
+              [field]: value,
+            }
+          : item,
+      ),
+    );
+  };
 
   const addItem = () => {
-    setItems([
-      ...items,
+    setItems((currentItems) => [
+      ...currentItems,
       {
+        item_date: "",
         description: "",
-        quantity: 1,
-        unit_price: 0,
+        quantity: "",
+        unit_price: "",
       },
-    ])
-  }
+    ]);
+  };
 
   const removeItem = (index: number) => {
-    if (items.length === 1) return
+    if (items.length === 1) {
+      return;
+    }
 
-    setItems(items.filter((_, i) => i !== index))
-  }
+    setItems((currentItems) =>
+      currentItems.filter((_, itemIndex) => itemIndex !== index),
+    );
+  };
 
   const subtotal = useMemo(() => {
-    return items.reduce(
-      (total, item) =>
-        total + item.quantity * item.unit_price,
-      0
-    )
-  }, [items])
+    return items.reduce((total, item) => {
+      const quantity = Number(item.quantity) || 0;
+      const unitPrice = Number(item.unit_price) || 0;
+
+      return total + quantity * unitPrice;
+    }, 0);
+  }, [items]);
 
   const gstAmount = useMemo(() => {
     if (gstIncluded) {
-      return subtotal - subtotal / (1 + gstRate / 100)
+      return subtotal - subtotal / (1 + gstRate / 100);
     }
 
-    return subtotal * (gstRate / 100)
-  }, [subtotal, gstRate, gstIncluded])
+    return subtotal * (gstRate / 100);
+  }, [subtotal, gstRate, gstIncluded]);
 
-  const total = gstIncluded
-    ? subtotal
-    : subtotal + gstAmount
+  const total = gstIncluded ? subtotal : subtotal + gstAmount;
 
-const showError = (errorMessage: string) => {
-  setMessage(errorMessage)
-  setMessageType("error")
-  setTimeout(() => {
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    })
-  }, 100)
-}
+  const handleSaveInvoice = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  const handleSaveInvoice = async (
+    setMessage("");
 
-    e: React.FormEvent
-  ) => {
-    e.preventDefault()
-setMessage("")
     if (!businessId) {
-      showError("Business profile not found.")
-      return
+      showError("Business profile not found.");
+      return;
     }
 
- if (!customerId) {
-  showError("Please select a customer.")
-  return
-}
+    if (!customerId) {
+      showError("Please select a customer.");
+      return;
+    }
 
-if (items.length === 0) {
-  showError("Please add at least one invoice item.")
-  return
-}
+    if (!invoiceDate) {
+      showError("Invoice date is required.");
+      return;
+    }
 
-if (
-  items.some(
-    (item) =>
-      !item.description.trim() ||
-      item.quantity <= 0 ||
-      item.unit_price < 0
-  )
-) {
-  showError(
-    "Each item needs a description, quantity greater than 0, and a valid price."
-  )
-  return
-}
+    if (items.length === 0) {
+      showError("Please add at least one invoice item.");
+      return;
+    }
 
-    setSaving(true)
-    setMessage("")
+    const invalidItem = items.some((item) => {
+      const quantity = Number(item.quantity);
+      const unitPrice = Number(item.unit_price);
 
-    const { data: invoice, error: invoiceError } =
-      await supabase
-        .from("invoices")
-        .insert({
-          business_id: businessId,
-          customer_id: customerId,
-          invoice_number: invoiceNumber,
-          invoice_date: invoiceDate,
-          due_date: dueDate || null,
-          reference: reference || null,
+      return (
+        !item.description.trim() ||
+        !item.quantity.trim() ||
+        !item.unit_price.trim() ||
+        quantity <= 0 ||
+        unitPrice < 0
+      );
+    });
 
-          subtotal,
-          gst_rate: gstRate,
-          gst_included: gstIncluded,
-          gst_amount: gstAmount,
-          discount: 0,
-          total,
+    if (invalidItem) {
+      showError(
+        "Each item needs a description, quantity greater than 0, and a valid unit price.",
+      );
+      return;
+    }
 
-          status: "draft",
-          notes: notes || null,
-          payment_notes: paymentNotes || null,
-        })
-        .select()
-        .single()
+    setSaving(true);
+
+    const { data: invoice, error: invoiceError } = await supabase
+      .from("invoices")
+      .insert({
+        business_id: businessId,
+        customer_id: customerId,
+        invoice_number: invoiceNumber,
+        invoice_date: invoiceDate,
+        due_date: dueDate || null,
+        reference: reference.trim() || null,
+
+        subtotal,
+        gst_rate: gstRate,
+        gst_included: gstIncluded,
+        gst_amount: gstAmount,
+        discount: 0,
+        total,
+
+        status: "draft",
+        notes: notes.trim() || null,
+        payment_notes: paymentNotes.trim() || null,
+      })
+      .select()
+      .single();
 
     if (invoiceError || !invoice) {
-      showError(
-        invoiceError?.message || "Unable to save invoice."
-      )
-      setSaving(false)
-      return
+      showError(invoiceError?.message || "Unable to save invoice.");
+      setSaving(false);
+      return;
     }
 
-    const invoiceItems = items.map((item, index) => ({
-      invoice_id: invoice.id,
-      description: item.description,
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-      amount: item.quantity * item.unit_price,
-      sort_order: index,
-    }))
+    const invoiceItems = items.map((item, index) => {
+      const quantity = Number(item.quantity);
+      const unitPrice = Number(item.unit_price);
+
+      return {
+        invoice_id: invoice.id,
+
+        item_date: item.item_date || null,
+
+        description: item.description.trim(),
+
+        quantity,
+
+        unit_price: unitPrice,
+
+        amount: quantity * unitPrice,
+
+        sort_order: index,
+      };
+    });
 
     const { error: itemsError } = await supabase
       .from("invoice_items")
-      .insert(invoiceItems)
+      .insert(invoiceItems);
 
     if (itemsError) {
-      showError(itemsError.message)
-      setSaving(false)
-      return
+      showError(itemsError.message);
+      setSaving(false);
+      return;
     }
 
-    // setMessage("Invoice saved successfully.")
-    router.push(`/invoices/${invoice.id}`)
-    setSaving(false)
-  }
+    setSaving(false);
+
+    router.push(`/invoices/${invoice.id}`);
+  };
 
   return (
-    <div className="mx-auto max-w-5xl p-6">
+    <div className="mx-auto max-w-6xl p-4 sm:p-6">
       <div className="mb-6">
         <h1 className="text-3xl font-semibold tracking-tight">
           Create Invoice
         </h1>
 
-        <p className="text-sm text-muted-foreground">
+        <p className="mt-1 text-sm text-muted-foreground">
           Create a new invoice for your customer.
         </p>
       </div>
 
-     {message && (
-  <div
-    className={
-      messageType === "error"
-        ? "mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
-        : "mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700"
-    }
-  >
-    {message}
-  </div>
-)}
+      {message && (
+        <div
+          className={
+            messageType === "error"
+              ? "mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
+              : "mb-6 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700"
+          }
+        >
+          {message}
+        </div>
+      )}
 
-      <form
-        onSubmit={handleSaveInvoice}
-        className="space-y-8"
-      >
+      <form onSubmit={handleSaveInvoice} className="space-y-8">
         {/* Customer + Invoice Details */}
-        <div className="grid gap-6 rounded-lg border p-6 md:grid-cols-2">
+
+        <div className="grid gap-6 rounded-xl border p-6 md:grid-cols-2">
           <div className="space-y-2">
-            <Label>Customer</Label>
+            <Label>Customer *</Label>
 
             <select
               value={customerId}
-              onChange={(e) =>
-                setCustomerId(e.target.value)
-              }
-              className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
-              required
+              onChange={(e) => setCustomerId(e.target.value)}
+              className="h-10 w-full rounded-md border bg-transparent px-3 text-sm"
             >
-              <option value="">
-                Select customer
-              </option>
+              <option value="">Select customer</option>
 
               {customers.map((customer) => (
-                <option
-                  key={customer.id}
-                  value={customer.id}
-                >
-                  {customer.company_name ||
-                    customer.name}
+                <option key={customer.id} value={customer.id}>
+                  {customer.company_name || customer.name}
                 </option>
               ))}
             </select>
@@ -327,23 +347,16 @@ if (
           <div className="space-y-2">
             <Label>Invoice Number</Label>
 
-          <Input
-  value={invoiceNumber}
-  readOnly
-  className="bg-muted"
-/>
+            <Input value={invoiceNumber} readOnly className="bg-muted" />
           </div>
 
           <div className="space-y-2">
-            <Label>Invoice Date</Label>
+            <Label>Invoice Date *</Label>
 
             <Input
               type="date"
               value={invoiceDate}
-              onChange={(e) =>
-                setInvoiceDate(e.target.value)
-              }
-              required
+              onChange={(e) => setInvoiceDate(e.target.value)}
             />
           </div>
 
@@ -353,9 +366,7 @@ if (
             <Input
               type="date"
               value={dueDate}
-              onChange={(e) =>
-                setDueDate(e.target.value)
-              }
+              onChange={(e) => setDueDate(e.target.value)}
             />
           </div>
 
@@ -364,26 +375,19 @@ if (
 
             <Input
               value={reference}
-              onChange={(e) =>
-                setReference(e.target.value)
-              }
-              placeholder="Reference"
+              onChange={(e) => setReference(e.target.value)}
+              placeholder="e.g. Purchase order or customer reference"
             />
           </div>
         </div>
 
         {/* Invoice Items */}
-        <div className="rounded-lg border p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">
-              Invoice Items
-            </h2>
 
-            <Button
-              type="button"
-              variant="outline"
-              onClick={addItem}
-            >
+        <div className="rounded-xl border p-6">
+          <div className="mb-5 flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Invoice Items</h2>
+
+            <Button type="button" variant="outline" onClick={addItem}>
               <PlusIcon className="mr-2 size-4" />
               Add Item
             </Button>
@@ -391,50 +395,71 @@ if (
 
           <div className="space-y-4">
             {items.map((item, index) => {
-              const amount =
-                item.quantity * item.unit_price
+              const quantity = Number(item.quantity) || 0;
+
+              const unitPrice = Number(item.unit_price) || 0;
+
+              const amount = quantity * unitPrice;
 
               return (
                 <div
                   key={index}
-                  className="grid items-end gap-3 md:grid-cols-[1fr_120px_150px_150px_50px]"
+                  className="grid items-end gap-3 rounded-lg border p-4 xl:grid-cols-[145px_1fr_100px_130px_130px_50px]"
                 >
+                  {/* Optional Date */}
+
                   <div className="space-y-2">
-                    <Label>Description</Label>
+                    <Label>
+                      Date
+                      <span className="ml-1 text-xs font-normal text-muted-foreground">
+                        Optional
+                      </span>
+                    </Label>
+
+                    <Input
+                      type="date"
+                      value={item.item_date}
+                      onChange={(e) =>
+                        updateItem(index, "item_date", e.target.value)
+                      }
+                    />
+                  </div>
+
+                  {/* Description */}
+
+                  <div className="space-y-2">
+                    <Label>Description *</Label>
 
                     <Input
                       value={item.description}
                       onChange={(e) =>
-                        updateItem(
-                          index,
-                          "description",
-                          e.target.value
-                        )
+                        updateItem(index, "description", e.target.value)
                       }
-                      placeholder="Description"
+                      placeholder="e.g. Fresh Milk Original"
                     />
                   </div>
 
+                  {/* Quantity */}
+
                   <div className="space-y-2">
-                    <Label>Qty</Label>
+                    <Label>Qty *</Label>
 
                     <Input
                       type="number"
                       min="0"
-                      step="0.01"
+                      step="1"
                       value={item.quantity}
                       onChange={(e) =>
-                        updateItem(
-                          index,
-                          "quantity",
-                          e.target.value
-                        )
+                        updateItem(index, "quantity", e.target.value)
                       }
+                      placeholder="e.g. 14"
                     />
                   </div>
 
+                  {/* Unit Price */}
+
                   <div className="space-y-2">
-                    <Label>Unit Price</Label>
+                    <Label>Unit Price *</Label>
 
                     <Input
                       type="number"
@@ -442,106 +467,101 @@ if (
                       step="0.01"
                       value={item.unit_price}
                       onChange={(e) =>
-                        updateItem(
-                          index,
-                          "unit_price",
-                          e.target.value
-                        )
+                        updateItem(index, "unit_price", e.target.value)
                       }
+                      placeholder="e.g. 5.50"
                     />
                   </div>
+
+                  {/* Amount */}
 
                   <div className="space-y-2">
                     <Label>Amount</Label>
 
-                    <Input
-                      value={`$${amount.toFixed(2)}`}
-                      disabled
-                    />
+                    <Input value={`$${amount.toFixed(2)}`} disabled />
                   </div>
+
+                  {/* Delete */}
 
                   <Button
                     type="button"
                     variant="outline"
                     size="icon"
-                    onClick={() =>
-                      removeItem(index)
-                    }
+                    title="Remove item"
+                    onClick={() => removeItem(index)}
                     disabled={items.length === 1}
                   >
                     <Trash2Icon className="size-4" />
                   </Button>
                 </div>
-              )
+              );
             })}
           </div>
         </div>
 
         {/* GST */}
-        <div className="grid gap-6 rounded-lg border p-6 md:grid-cols-2">
+
+        <div className="grid gap-6 rounded-xl border p-6 md:grid-cols-2">
           <div className="space-y-2">
             <Label>GST Rate (%)</Label>
 
             <Input
               type="number"
+              min="0"
+              step="0.01"
               value={gstRate}
-              onChange={(e) =>
-                setGstRate(Number(e.target.value))
-              }
+              onChange={(e) => setGstRate(Number(e.target.value))}
             />
           </div>
 
           <div className="flex items-center gap-3">
             <input
+              id="gstIncluded"
               type="checkbox"
               checked={gstIncluded}
-              onChange={(e) =>
-                setGstIncluded(e.target.checked)
-              }
+              onChange={(e) => setGstIncluded(e.target.checked)}
+              className="size-4"
             />
 
-            <Label>
-              Prices include GST
-            </Label>
+            <Label htmlFor="gstIncluded">Prices include GST</Label>
           </div>
         </div>
 
         {/* Totals */}
-        <div className="ml-auto max-w-sm space-y-3 rounded-lg border p-6">
+
+        <div className="ml-auto max-w-sm space-y-3 rounded-xl border p-6">
           <div className="flex justify-between">
             <span>Subtotal</span>
-            <span>
-              ${subtotal.toFixed(2)}
-            </span>
+
+            <span>${subtotal.toFixed(2)}</span>
           </div>
 
           <div className="flex justify-between">
-            <span>GST ({gstRate}%)</span>
             <span>
-              ${gstAmount.toFixed(2)}
+              {gstIncluded ? `Includes GST (${gstRate}%)` : `GST (${gstRate}%)`}
             </span>
+
+            <span>${gstAmount.toFixed(2)}</span>
           </div>
 
           <div className="flex justify-between border-t pt-3 text-lg font-bold">
             <span>Total</span>
-            <span>
-              ${total.toFixed(2)}
-            </span>
+
+            <span>${total.toFixed(2)}</span>
           </div>
         </div>
 
         {/* Notes */}
+
         <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-2">
             <Label>Notes</Label>
 
             <textarea
               value={notes}
-              onChange={(e) =>
-                setNotes(e.target.value)
-              }
+              onChange={(e) => setNotes(e.target.value)}
               className="min-h-24 w-full rounded-md border bg-transparent p-3 text-sm"
-              placeholder="Thank you for your business."
+              placeholder="e.g. Thank you for your business."
             />
           </div>
 
@@ -550,26 +570,21 @@ if (
 
             <textarea
               value={paymentNotes}
-              onChange={(e) =>
-                setPaymentNotes(e.target.value)
-              }
+              onChange={(e) => setPaymentNotes(e.target.value)}
               className="min-h-24 w-full rounded-md border bg-transparent p-3 text-sm"
-              placeholder="Please make payment to the bank account shown on the invoice."
+              placeholder="e.g. Please make payment to the bank account shown on the invoice."
             />
           </div>
         </div>
 
+        {/* Save */}
+
         <div className="flex justify-end">
-          <Button
-            type="submit"
-            disabled={saving}
-          >
-            {saving
-              ? "Saving Invoice..."
-              : "Save Invoice"}
+          <Button type="submit" disabled={saving}>
+            {saving ? "Saving Invoice..." : "Save Invoice"}
           </Button>
         </div>
       </form>
     </div>
-  )
+  );
 }

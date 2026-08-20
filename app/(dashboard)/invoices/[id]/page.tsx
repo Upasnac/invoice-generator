@@ -7,8 +7,10 @@ import { ArrowLeftIcon, PrinterIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 import { Button, buttonVariants } from "@/components/ui/button";
+
 type InvoiceItem = {
   id: string;
+  item_date: string | null;
   description: string;
   quantity: number;
   unit_price: number;
@@ -22,11 +24,13 @@ type Invoice = {
   invoice_date: string;
   due_date: string | null;
   reference: string | null;
+
   subtotal: number;
   gst_rate: number;
   gst_amount: number;
   gst_included: boolean;
   total: number;
+
   status: string;
   notes: string | null;
   payment_notes: string | null;
@@ -67,7 +71,9 @@ export default function InvoiceViewPage({
   const supabase = createClient();
 
   const [invoice, setInvoice] = useState<Invoice | null>(null);
+
   const [loading, setLoading] = useState(true);
+
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -76,6 +82,7 @@ export default function InvoiceViewPage({
 
   const loadInvoice = async () => {
     setLoading(true);
+    setMessage("");
 
     const { data, error } = await supabase
       .from("invoices")
@@ -120,6 +127,7 @@ export default function InvoiceViewPage({
 
         invoice_items (
           id,
+          item_date,
           description,
           quantity,
           unit_price,
@@ -133,17 +141,17 @@ export default function InvoiceViewPage({
 
     if (error) {
       setMessage(error.message);
-    } else {
-      const invoiceData = data as unknown as Invoice;
-
-      invoiceData.invoice_items =
-        invoiceData.invoice_items?.sort(
-          (a, b) => a.sort_order - b.sort_order,
-        ) || [];
-
-      setInvoice(invoiceData);
+      setLoading(false);
+      return;
     }
 
+    const invoiceData = data as unknown as Invoice;
+
+    invoiceData.invoice_items =
+      invoiceData.invoice_items?.sort((a, b) => a.sort_order - b.sort_order) ||
+      [];
+
+    setInvoice(invoiceData);
     setLoading(false);
   };
 
@@ -151,7 +159,7 @@ export default function InvoiceViewPage({
     return new Intl.NumberFormat("en-NZ", {
       style: "currency",
       currency: "NZD",
-    }).format(value);
+    }).format(Number(value));
   };
 
   const formatDate = (date: string | null) => {
@@ -177,6 +185,7 @@ export default function InvoiceViewPage({
   }
 
   const business = invoice.businesses;
+
   const customer = invoice.customers;
 
   const handlePrint = () => {
@@ -198,7 +207,7 @@ export default function InvoiceViewPage({
 
   return (
     <div className="min-h-screen bg-muted/30 p-6">
-      {/* Page controls */}
+      {/* Controls */}
       <div className="mx-auto mb-4 flex max-w-5xl items-center justify-between print:hidden">
         <Link
           href="/invoices"
@@ -209,6 +218,7 @@ export default function InvoiceViewPage({
           <ArrowLeftIcon className="mr-2 size-4" />
           Back to Invoices
         </Link>
+
         <Link
           href={`/invoices/${invoice.id}/edit`}
           className={buttonVariants({
@@ -217,6 +227,7 @@ export default function InvoiceViewPage({
         >
           Edit Invoice
         </Link>
+
         <Button onClick={handlePrint}>
           <PrinterIcon className="mr-2 size-4" />
           Print / Save PDF
@@ -224,9 +235,8 @@ export default function InvoiceViewPage({
       </div>
 
       {/* Invoice */}
-
       <div className="invoice-print-area mx-auto max-w-5xl bg-white p-8 shadow-sm md:p-12">
-        {/* Top */}
+        {/* Header */}
         <div className="flex flex-col justify-between gap-8 border-b pb-8 md:flex-row">
           <div>
             <h1 className="text-3xl font-bold">
@@ -247,20 +257,14 @@ export default function InvoiceViewPage({
           <div className="md:text-right">
             <h2 className="text-4xl font-light tracking-wide">TAX INVOICE</h2>
 
-            <p className="mt-3 font-semibold">{invoice.invoice_number}</p>
-
-            {/* <p className="mt-1 text-sm text-gray-600">
-              Status:{" "}
-              <span className="capitalize">
-                {invoice.status}
-              </span>
-            </p> */}
+            <p className="mt-3 font-semibold">
+              Invoice Number: {invoice.invoice_number}
+            </p>
           </div>
         </div>
 
-        {/* Customer + dates */}
+        {/* Customer + Invoice Dates */}
         <div className="invoice-meta grid gap-8 py-8 md:grid-cols-2">
-          {" "}
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
               Bill To
@@ -288,6 +292,7 @@ export default function InvoiceViewPage({
               {customer?.country && <p>{customer.country}</p>}
             </div>
           </div>
+
           <div className="space-y-2 text-sm md:ml-auto md:min-w-72">
             <div className="flex justify-between gap-8">
               <span className="text-gray-500">Invoice Date</span>
@@ -311,33 +316,39 @@ export default function InvoiceViewPage({
           </div>
         </div>
 
-        {/* Items */}
+        {/* Invoice Items */}
         <div className="overflow-hidden rounded-md border">
           <table className="w-full text-sm">
             <thead className="bg-gray-100">
               <tr>
-                <th className="px-4 py-3 text-left">Description</th>
+                <th className="px-3 py-3 text-left">Date</th>
 
-                <th className="px-4 py-3 text-right">Qty</th>
+                <th className="px-3 py-3 text-left">Description</th>
 
-                <th className="px-4 py-3 text-right">Unit Price</th>
+                <th className="px-3 py-3 text-right">Qty</th>
 
-                <th className="px-4 py-3 text-right">Amount</th>
+                <th className="px-3 py-3 text-right">Unit Price</th>
+
+                <th className="px-3 py-3 text-right">Amount</th>
               </tr>
             </thead>
 
             <tbody>
               {invoice.invoice_items.map((item) => (
                 <tr key={item.id} className="border-t">
-                  <td className="px-4 py-3">{item.description}</td>
+                  <td className="whitespace-nowrap px-3 py-3">
+                    {item.item_date ? formatDate(item.item_date) : "—"}
+                  </td>
 
-                  <td className="px-4 py-3 text-right">{item.quantity}</td>
+                  <td className="px-3 py-3">{item.description}</td>
 
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-3 py-3 text-right">{item.quantity}</td>
+
+                  <td className="px-3 py-3 text-right">
                     {formatMoney(item.unit_price)}
                   </td>
 
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-3 py-3 text-right">
                     {formatMoney(item.amount)}
                   </td>
                 </tr>
@@ -371,7 +382,7 @@ export default function InvoiceViewPage({
           </div>
         </div>
 
-        {/* Payment details */}
+        {/* Payment Details */}
         {(business?.bank_name ||
           business?.bank_account_name ||
           business?.bank_account_number) && (
@@ -392,6 +403,7 @@ export default function InvoiceViewPage({
           </div>
         )}
 
+        {/* Payment Notes */}
         {invoice.payment_notes && (
           <div className="mt-6">
             <h3 className="font-semibold">Payment Notes</h3>
@@ -402,6 +414,7 @@ export default function InvoiceViewPage({
           </div>
         )}
 
+        {/* Notes */}
         {invoice.notes && (
           <div className="mt-6">
             <h3 className="font-semibold">Notes</h3>
@@ -411,6 +424,8 @@ export default function InvoiceViewPage({
             </p>
           </div>
         )}
+
+        {/* Footer */}
         <div className="mt-6 border-t pt-4 text-center text-sm text-gray-500">
           Thank you for your business.
         </div>
