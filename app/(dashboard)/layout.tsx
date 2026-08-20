@@ -1,6 +1,7 @@
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { AuthGuard } from "@/components/auth-guard"
+import { BusinessSetupGuard } from "@/components/business-setup-guard"
 import {
   SidebarInset,
   SidebarProvider,
@@ -13,6 +14,7 @@ export default function DashboardLayout({
 }) {
   return (
     <AuthGuard>
+      <BusinessSetupGuard>
       <SidebarProvider
         style={
           {
@@ -35,6 +37,7 @@ export default function DashboardLayout({
           </main>
         </SidebarInset>
       </SidebarProvider>
+      </BusinessSetupGuard>
     </AuthGuard>
   )
 }

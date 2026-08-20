@@ -1,10 +1,9 @@
 "use client"
-
 import { useState } from "react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
-
-import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
+import { Button, buttonVariants} from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -17,12 +16,15 @@ import { Label } from "@/components/ui/label"
 
 export default function SignupPage() {
   const supabase = createClient()
+  const router = useRouter()
+  
 const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [message, setMessage] = useState("")
   const [loading, setLoading] = useState(false)
+const [signupSuccess, setSignupSuccess] = useState(false)
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -48,9 +50,12 @@ const { error } = await supabase.auth.signUp({
       setLoading(false)
       return
     }
+setMessage(
+  "Account created. Please check your email to confirm your account, then log in."
+)
+setSignupSuccess(true)
+setLoading(false)
 
-    setMessage("Account created successfully.")
-    setLoading(false)
   }
 
   return (
@@ -116,19 +121,36 @@ const { error } = await supabase.auth.signUp({
               />
             </div>
 
-            {message && (
-              <p className="text-sm text-muted-foreground">
-                {message}
-              </p>
-            )}
+         {message && (
+  <div
+    className={`rounded-lg border px-4 py-3 text-sm ${
+      signupSuccess
+        ? "border-green-200 bg-green-50 text-green-700"
+        : "border-red-200 bg-red-50 text-red-700"
+    }`}
+  >
+    {message}
+  </div>
+)}
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={loading}
-            >
-              {loading ? "Creating account..." : "Create Account"}
-            </Button>
+          {!signupSuccess ? (
+  <Button
+    type="submit"
+    className="w-full"
+    disabled={loading}
+  >
+    {loading ? "Creating account..." : "Create Account"}
+  </Button>
+) : (
+  <Link
+    href="/login"
+    className={buttonVariants({
+      className: "w-full",
+    })}
+  >
+    Go to Login
+  </Link>
+)}
 
             <p className="text-center text-sm text-muted-foreground">
               Already have an account?{" "}

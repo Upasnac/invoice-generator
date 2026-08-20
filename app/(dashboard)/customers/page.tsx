@@ -1,7 +1,11 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react"
+import {
+  PencilIcon,
+  PlusIcon,
+  Trash2Icon,
+} from "lucide-react"
 
 import { createClient } from "@/lib/supabase/client"
 
@@ -54,7 +58,9 @@ export default function CustomersPage() {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+
   const [message, setMessage] = useState("")
+  const [formError, setFormError] = useState("")
 
   const [name, setName] = useState("")
   const [companyName, setCompanyName] = useState("")
@@ -84,14 +90,20 @@ export default function CustomersPage() {
       return
     }
 
-    const { data: business, error: businessError } = await supabase
+    const {
+      data: business,
+      error: businessError,
+    } = await supabase
       .from("businesses")
       .select("id")
       .eq("user_id", user.id)
       .maybeSingle()
 
     if (businessError || !business) {
-      setMessage("Business profile not found.")
+      setMessage(
+        businessError?.message ||
+          "Business profile not found."
+      )
       setLoading(false)
       return
     }
@@ -102,10 +114,13 @@ export default function CustomersPage() {
       .from("customers")
       .select("*")
       .eq("business_id", business.id)
-      .order("created_at", { ascending: false })
+      .order("created_at", {
+        ascending: false,
+      })
 
     if (error) {
       setMessage(error.message)
+      setCustomers([])
     } else {
       setCustomers(data || [])
     }
@@ -123,7 +138,9 @@ export default function CustomersPage() {
     setCity("")
     setPostcode("")
     setCountry("New Zealand")
+
     setEditingCustomer(null)
+    setFormError("")
   }
 
   const openAddCustomer = () => {
@@ -131,7 +148,9 @@ export default function CustomersPage() {
     setOpen(true)
   }
 
-  const openEditCustomer = (customer: Customer) => {
+  const openEditCustomer = (
+    customer: Customer
+  ) => {
     setEditingCustomer(customer)
 
     setName(customer.name || "")
@@ -144,31 +163,126 @@ export default function CustomersPage() {
     setPostcode(customer.postcode || "")
     setCountry(customer.country || "New Zealand")
 
+    setFormError("")
     setOpen(true)
   }
 
-  const handleSaveCustomer = async (e: React.FormEvent) => {
+  const handleSaveCustomer = async (
+    e: React.FormEvent
+  ) => {
     e.preventDefault()
 
+    setFormError("")
+    setMessage("")
+
     if (!businessId) {
-      setMessage("Business profile not found.")
+      setFormError("Business profile not found.")
+      return
+    }
+
+    // -----------------------------
+    // Validation
+    // -----------------------------
+
+    if (!name.trim()) {
+      setFormError("Customer name is required.")
+      return
+    }
+
+    if (name.trim().length < 2) {
+      setFormError(
+        "Customer name must be at least 2 characters."
+      )
+      return
+    }
+
+    if (!companyName.trim()) {
+      setFormError("Company name is required.")
+      return
+    }
+
+    if (!email.trim()) {
+      setFormError("Email address is required.")
+      return
+    }
+
+    const emailPattern =
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+    if (!emailPattern.test(email.trim())) {
+      setFormError(
+        "Please enter a valid email address."
+      )
+      return
+    }
+
+    if (!phone.trim()) {
+      setFormError("Phone number is required.")
+      return
+    }
+
+    const phoneDigits =
+      phone.replace(/\D/g, "")
+
+    if (phoneDigits.length < 7) {
+      setFormError(
+        "Please enter a valid phone number."
+      )
+      return
+    }
+
+    if (!addressLine1.trim()) {
+      setFormError(
+        "Address Line 1 is required."
+      )
+      return
+    }
+
+    // Address Line 2 is optional
+
+    if (!city.trim()) {
+      setFormError("City is required.")
+      return
+    }
+
+    if (!postcode.trim()) {
+      setFormError("Postcode is required.")
+      return
+    }
+
+    if (
+      country.trim().toLowerCase() ===
+        "new zealand" &&
+      !/^\d{4}$/.test(postcode.trim())
+    ) {
+      setFormError(
+        "New Zealand postcodes must contain 4 digits."
+      )
+      return
+    }
+
+    if (!country.trim()) {
+      setFormError("Country is required.")
       return
     }
 
     setSaving(true)
-    setMessage("")
 
     const customerData = {
       business_id: businessId,
-      name,
-      company_name: companyName || null,
-      email: email || null,
-      phone: phone || null,
-      address_line1: addressLine1 || null,
-      address_line2: addressLine2 || null,
-      city: city || null,
-      postcode: postcode || null,
-      country,
+
+      name: name.trim(),
+      company_name: companyName.trim(),
+      email: email.trim(),
+      phone: phone.trim(),
+      address_line1: addressLine1.trim(),
+
+      address_line2:
+        addressLine2.trim() || null,
+
+      city: city.trim(),
+      postcode: postcode.trim(),
+      country: country.trim(),
     }
 
     let error
@@ -177,7 +291,10 @@ export default function CustomersPage() {
       const result = await supabase
         .from("customers")
         .update(customerData)
-        .eq("id", editingCustomer.id)
+        .eq(
+          "id",
+          editingCustomer.id
+        )
 
       error = result.error
     } else {
@@ -189,7 +306,7 @@ export default function CustomersPage() {
     }
 
     if (error) {
-      setMessage(error.message)
+      setFormError(error.message)
       setSaving(false)
       return
     }
@@ -201,12 +318,17 @@ export default function CustomersPage() {
     await loadCustomers()
   }
 
-  const handleDelete = async (id: string) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this customer?"
-    )
+  const handleDelete = async (
+    id: string
+  ) => {
+    const confirmed =
+      window.confirm(
+        "Are you sure you want to delete this customer?"
+      )
 
     if (!confirmed) return
+
+    setMessage("")
 
     const { error } = await supabase
       .from("customers")
@@ -222,13 +344,15 @@ export default function CustomersPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6 lg:p-8">
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Customers</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">
+            Customers
+          </h1>
 
-          <p className="text-sm text-muted-foreground">
+          <p className="mt-1 text-sm text-muted-foreground">
             Manage customers used on your invoices.
           </p>
         </div>
@@ -245,17 +369,21 @@ export default function CustomersPage() {
         >
           <DialogTrigger
             render={
-              <Button onClick={openAddCustomer}>
+              <Button
+                onClick={openAddCustomer}
+              >
                 <PlusIcon className="mr-2 size-4" />
                 Add Customer
               </Button>
             }
           />
 
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>
-                {editingCustomer ? "Edit Customer" : "Add Customer"}
+                {editingCustomer
+                  ? "Edit Customer"
+                  : "Add Customer"}
               </DialogTitle>
 
               <DialogDescription>
@@ -265,79 +393,106 @@ export default function CustomersPage() {
               </DialogDescription>
             </DialogHeader>
 
+            {/* Validation Error */}
+            {formError && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                {formError}
+              </div>
+            )}
+
             <form onSubmit={handleSaveCustomer}>
               <div className="grid gap-4 py-4">
+                {/* Customer Name */}
                 <div className="grid gap-2">
-                  <Label htmlFor="name">Customer Name *</Label>
+                  <Label htmlFor="name">
+                    Customer Name *
+                  </Label>
 
                   <Input
                     id="name"
                     value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Green Dog"
-                    required
+                    onChange={(e) =>
+                      setName(e.target.value)
+                    }
+                    placeholder="e.g. Alex Johnson"
                   />
                 </div>
 
+                {/* Company Name */}
                 <div className="grid gap-2">
                   <Label htmlFor="company">
-                    Company Name
+                    Company Name *
                   </Label>
 
                   <Input
                     id="company"
                     value={companyName}
                     onChange={(e) =>
-                      setCompanyName(e.target.value)
+                      setCompanyName(
+                        e.target.value
+                      )
                     }
-                    placeholder="Green Dog Ltd"
+                    placeholder="e.g. ABC Solutions Ltd"
                   />
                 </div>
 
+                {/* Email + Phone */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email">
+                      Email *
+                    </Label>
 
                     <Input
                       id="email"
                       type="email"
                       value={email}
                       onChange={(e) =>
-                        setEmail(e.target.value)
+                        setEmail(
+                          e.target.value
+                        )
                       }
-                      placeholder="customer@example.com"
+                      placeholder="e.g. alex@example.com"
                     />
                   </div>
 
                   <div className="grid gap-2">
-                    <Label htmlFor="phone">Phone</Label>
+                    <Label htmlFor="phone">
+                      Phone *
+                    </Label>
 
                     <Input
                       id="phone"
                       value={phone}
                       onChange={(e) =>
-                        setPhone(e.target.value)
+                        setPhone(
+                          e.target.value
+                        )
                       }
-                      placeholder="021 123 4567"
+                      placeholder="e.g. 021 123 4567"
                     />
                   </div>
                 </div>
 
+                {/* Address Line 1 */}
                 <div className="grid gap-2">
                   <Label htmlFor="address1">
-                    Address Line 1
+                    Address Line 1 *
                   </Label>
 
                   <Input
                     id="address1"
                     value={addressLine1}
                     onChange={(e) =>
-                      setAddressLine1(e.target.value)
+                      setAddressLine1(
+                        e.target.value
+                      )
                     }
-                    placeholder="7/180 Maces Road"
+                    placeholder="e.g. 25 Example Street"
                   />
                 </div>
 
+                {/* Address Line 2 */}
                 <div className="grid gap-2">
                   <Label htmlFor="address2">
                     Address Line 2
@@ -347,53 +502,71 @@ export default function CustomersPage() {
                     id="address2"
                     value={addressLine2}
                     onChange={(e) =>
-                      setAddressLine2(e.target.value)
+                      setAddressLine2(
+                        e.target.value
+                      )
                     }
-                    placeholder="Bromley"
+                    placeholder="e.g. Unit 4"
                   />
+
+                  <p className="text-xs text-muted-foreground">
+                    Optional
+                  </p>
                 </div>
 
+                {/* City + Postcode */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label htmlFor="city">City</Label>
+                    <Label htmlFor="city">
+                      City *
+                    </Label>
 
                     <Input
                       id="city"
                       value={city}
                       onChange={(e) =>
-                        setCity(e.target.value)
+                        setCity(
+                          e.target.value
+                        )
                       }
-                      placeholder="Christchurch"
+                      placeholder="e.g. Christchurch"
                     />
                   </div>
 
                   <div className="grid gap-2">
                     <Label htmlFor="postcode">
-                      Postcode
+                      Postcode *
                     </Label>
 
                     <Input
                       id="postcode"
                       value={postcode}
                       onChange={(e) =>
-                        setPostcode(e.target.value)
+                        setPostcode(
+                          e.target.value
+                        )
                       }
-                      placeholder="8062"
+                      placeholder="e.g. 8011"
+                      inputMode="numeric"
                     />
                   </div>
                 </div>
 
+                {/* Country */}
                 <div className="grid gap-2">
                   <Label htmlFor="country">
-                    Country
+                    Country *
                   </Label>
 
                   <Input
                     id="country"
                     value={country}
                     onChange={(e) =>
-                      setCountry(e.target.value)
+                      setCountry(
+                        e.target.value
+                      )
                     }
+                    placeholder="e.g. New Zealand"
                   />
                 </div>
               </div>
@@ -426,15 +599,15 @@ export default function CustomersPage() {
         </Dialog>
       </div>
 
-      {/* Messages */}
+      {/* Page-level Error */}
       {message && (
-        <p className="mb-4 text-sm text-destructive">
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
           {message}
-        </p>
+        </div>
       )}
 
       {/* Customer Table */}
-      <div className="overflow-hidden rounded-lg border bg-card">
+      <div className="overflow-x-auto rounded-lg border bg-card">
         <Table>
           <TableHeader>
             <TableRow>
@@ -455,7 +628,7 @@ export default function CustomersPage() {
               <TableRow>
                 <TableCell
                   colSpan={6}
-                  className="h-24 text-center"
+                  className="h-28 text-center text-muted-foreground"
                 >
                   Loading customers...
                 </TableCell>
@@ -464,7 +637,7 @@ export default function CustomersPage() {
               <TableRow>
                 <TableCell
                   colSpan={6}
-                  className="h-24 text-center text-muted-foreground"
+                  className="h-28 text-center text-muted-foreground"
                 >
                   No customers yet. Add your first customer.
                 </TableCell>
@@ -495,20 +668,28 @@ export default function CustomersPage() {
                   <TableCell>
                     <div className="flex justify-end gap-2">
                       <Button
+                        type="button"
                         variant="outline"
                         size="icon"
+                        title="Edit customer"
                         onClick={() =>
-                          openEditCustomer(customer)
+                          openEditCustomer(
+                            customer
+                          )
                         }
                       >
                         <PencilIcon className="size-4" />
                       </Button>
 
                       <Button
+                        type="button"
                         variant="outline"
                         size="icon"
+                        title="Delete customer"
                         onClick={() =>
-                          handleDelete(customer.id)
+                          handleDelete(
+                            customer.id
+                          )
                         }
                       >
                         <Trash2Icon className="size-4" />

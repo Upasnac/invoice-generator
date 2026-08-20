@@ -7,13 +7,6 @@ import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 
 export default function SettingsPage() {
   const supabase = createClient()
@@ -29,20 +22,34 @@ export default function SettingsPage() {
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+
   const [message, setMessage] = useState("")
   const [errorMessage, setErrorMessage] = useState("")
+
+  const showError = (error: string) => {
+    setErrorMessage(error)
+    setMessage("")
+
+    setTimeout(() => {
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      })
+    }, 100)
+  }
 
   useEffect(() => {
     const loadBusiness = async () => {
       setLoading(true)
       setErrorMessage("")
+      setMessage("")
 
       const {
         data: { user },
       } = await supabase.auth.getUser()
 
       if (!user) {
-        setErrorMessage("You must be logged in.")
+        showError("You must be logged in.")
         setLoading(false)
         return
       }
@@ -54,7 +61,7 @@ export default function SettingsPage() {
         .maybeSingle()
 
       if (error) {
-        setErrorMessage(error.message)
+        showError(error.message)
         setLoading(false)
         return
       }
@@ -79,75 +86,154 @@ export default function SettingsPage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    setSaving(true)
     setMessage("")
     setErrorMessage("")
+
+    // -----------------------------
+    // Validation
+    // -----------------------------
+
+    if (!businessName.trim()) {
+      showError("Business name is required.")
+      return
+    }
+
+    if (!email.trim()) {
+      showError("Business email is required.")
+      return
+    }
+
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+    if (!emailPattern.test(email.trim())) {
+      showError("Please enter a valid business email address.")
+      return
+    }
+
+    if (!phone.trim()) {
+      showError("Phone number is required.")
+      return
+    }
+
+    if (!address.trim()) {
+      showError("Business address is required.")
+      return
+    }
+
+    if (!bankName.trim()) {
+      showError("Bank name is required.")
+      return
+    }
+
+    if (!bankAccountName.trim()) {
+      showError("Bank account name is required.")
+      return
+    }
+
+    if (!bankAccountNumber.trim()) {
+      showError("Bank account number is required.")
+      return
+    }
+
+    setSaving(true)
+
+    // -----------------------------
+    // Get logged-in user
+    // -----------------------------
 
     const {
       data: { user },
     } = await supabase.auth.getUser()
 
     if (!user) {
-      setErrorMessage("You must be logged in.")
+      showError("You must be logged in.")
       setSaving(false)
       return
     }
+
+    // -----------------------------
+    // Business data
+    // -----------------------------
 
     const businessData = {
       user_id: user.id,
-      business_name: businessName,
-      email: email || null,
-      phone: phone || null,
-      address: address || null,
-      gst_number: gstNumber || null,
-      bank_name: bankName || null,
-      bank_account_name: bankAccountName || null,
-      bank_account_number: bankAccountNumber || null,
+      business_name: businessName.trim(),
+      email: email.trim(),
+      phone: phone.trim(),
+      address: address.trim(),
+
+      // GST is optional
+      gst_number: gstNumber.trim() || null,
+
+      bank_name: bankName.trim(),
+      bank_account_name: bankAccountName.trim(),
+      bank_account_number: bankAccountNumber.trim(),
     }
 
-    const { data: existingBusiness, error: findError } =
-      await supabase
-        .from("businesses")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle()
+    // -----------------------------
+    // Check existing business
+    // -----------------------------
+
+    const {
+      data: existingBusiness,
+      error: findError,
+    } = await supabase
+      .from("businesses")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle()
 
     if (findError) {
-      setErrorMessage(findError.message)
+      showError(findError.message)
       setSaving(false)
       return
     }
 
-    let error
+    let saveError = null
+
+    // -----------------------------
+    // Update or create
+    // -----------------------------
 
     if (existingBusiness) {
-      const result = await supabase
+      const { error } = await supabase
         .from("businesses")
         .update(businessData)
         .eq("id", existingBusiness.id)
 
-      error = result.error
+      saveError = error
     } else {
-      const result = await supabase
+      const { error } = await supabase
         .from("businesses")
         .insert(businessData)
 
-      error = result.error
+      saveError = error
     }
 
-    if (error) {
-      setErrorMessage(error.message)
+    if (saveError) {
+      showError(saveError.message)
       setSaving(false)
       return
     }
 
+    // -----------------------------
+    // Success
+    // -----------------------------
+
     setMessage("Business profile saved successfully.")
     setSaving(false)
+
+    setTimeout(() => {
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      })
+    }, 100)
   }
 
   if (loading) {
     return (
-      <div className="p-6">
+      <div className="p-6 lg:p-8">
         <p className="text-sm text-muted-foreground">
           Loading business profile...
         </p>
@@ -158,11 +244,12 @@ export default function SettingsPage() {
   return (
     <div className="p-6 lg:p-8">
       <div className="mx-auto max-w-4xl">
+        {/* Header */}
         <div className="mb-6">
           <div className="flex items-center gap-2">
             <Building2Icon className="size-6" />
 
-            <h1 className="text-2xl font-bold">
+            <h1 className="text-3xl font-semibold tracking-tight">
               Business Profile
             </h1>
           </div>
@@ -172,178 +259,206 @@ export default function SettingsPage() {
           </p>
         </div>
 
-      <form onSubmit={handleSave} className="space-y-6">
+        {/* Error Message */}
+        {errorMessage && (
+          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+            {errorMessage}
+          </div>
+        )}
 
-  {/* Business Details */}
-  <div>
-    <h2 className="mb-4 text-lg font-semibold">
-      Business Details
-    </h2>
+        {/* Success Message */}
+        {message && (
+          <div className="mb-6 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
+            {message}
+          </div>
+        )}
 
-    <div className="space-y-4">
+        <form onSubmit={handleSave} className="space-y-8">
+          {/* Business Details */}
+          <section className="rounded-xl border bg-card p-6">
+            <div className="mb-5">
+              <h2 className="text-xl font-semibold">
+                Business Details
+              </h2>
 
-      <div className="space-y-2">
-        <Label htmlFor="businessName">
-          Business Name
-        </Label>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Enter the contact details that should appear on your invoices.
+              </p>
+            </div>
 
-        <Input
-          id="businessName"
-          type="text"
-          value={businessName}
-          onChange={(e) => setBusinessName(e.target.value)}
-          placeholder="Enter business name"
-          required
-        />
-      </div>
+            <div className="space-y-5">
+              {/* Business Name */}
+              <div className="space-y-2">
+                <Label htmlFor="businessName">
+                  Business Name *
+                </Label>
 
-      <div className="space-y-2">
-        <Label htmlFor="email">
-          Business Email
-        </Label>
+                <Input
+                  id="businessName"
+                  type="text"
+                  value={businessName}
+                  onChange={(e) =>
+                    setBusinessName(e.target.value)
+                  }
+                  placeholder="Enter business name"
+                />
+              </div>
 
-        <Input
-          id="email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Enter business email"
-        />
-      </div>
+              {/* Email */}
+              <div className="space-y-2">
+                <Label htmlFor="email">
+                  Business Email *
+                </Label>
 
-      <div className="space-y-2">
-        <Label htmlFor="phone">
-          Phone Number
-        </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) =>
+                    setEmail(e.target.value)
+                  }
+                  placeholder="Enter business email"
+                />
+              </div>
 
-        <Input
-          id="phone"
-          type="text"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          placeholder="Enter phone number"
-        />
-      </div>
+              {/* Phone */}
+              <div className="space-y-2">
+                <Label htmlFor="phone">
+                  Phone Number *
+                </Label>
 
-      <div className="space-y-2">
-        <Label htmlFor="address">
-          Business Address
-        </Label>
+                <Input
+                  id="phone"
+                  type="text"
+                  value={phone}
+                  onChange={(e) =>
+                    setPhone(e.target.value)
+                  }
+                  placeholder="Enter phone number"
+                />
+              </div>
 
-        <textarea
-          id="address"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          placeholder="Enter business address"
-          className="min-h-24 w-full rounded-md border bg-transparent px-3 py-2 text-sm"
-        />
-      </div>
+              {/* Address */}
+              <div className="space-y-2">
+                <Label htmlFor="address">
+                  Business Address *
+                </Label>
 
-      <div className="space-y-2">
-        <Label htmlFor="gstNumber">
-          GST Number
-        </Label>
+                <textarea
+                  id="address"
+                  value={address}
+                  onChange={(e) =>
+                    setAddress(e.target.value)
+                  }
+                  placeholder="Enter business address"
+                  className="min-h-28 w-full rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              </div>
 
-        <Input
-          id="gstNumber"
-          type="text"
-          value={gstNumber}
-          onChange={(e) => setGstNumber(e.target.value)}
-          placeholder="Enter GST number"
-        />
-      </div>
+              {/* GST */}
+              <div className="space-y-2">
+                <Label htmlFor="gstNumber">
+                  GST Number
+                </Label>
 
-    </div>
-  </div>
+                <Input
+                  id="gstNumber"
+                  type="text"
+                  value={gstNumber}
+                  onChange={(e) =>
+                    setGstNumber(e.target.value)
+                  }
+                  placeholder="Enter GST number"
+                />
 
+                <p className="text-xs text-muted-foreground">
+                  Optional. Leave blank if your business is not GST registered.
+                </p>
+              </div>
+            </div>
+          </section>
 
-  {/* Bank Details */}
-  <div className="border-t pt-6">
+          {/* Bank Details */}
+          <section className="rounded-xl border bg-card p-6">
+            <div className="mb-5">
+              <h2 className="text-xl font-semibold">
+                Bank Details
+              </h2>
 
-    <h2 className="mb-1 text-lg font-semibold">
-      Bank Details
-    </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                These details will appear on your invoices for payment.
+              </p>
+            </div>
 
-    <p className="mb-4 text-sm text-muted-foreground">
-      These details will appear on your invoices for payment.
-    </p>
+            <div className="space-y-5">
+              {/* Bank Name */}
+              <div className="space-y-2">
+                <Label htmlFor="bankName">
+                  Bank Name *
+                </Label>
 
-    <div className="space-y-4">
+                <Input
+                  id="bankName"
+                  type="text"
+                  value={bankName}
+                  onChange={(e) =>
+                    setBankName(e.target.value)
+                  }
+                  placeholder="e.g. ASB Bank"
+                />
+              </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="bankName">
-          Bank Name
-        </Label>
+              {/* Account Name */}
+              <div className="space-y-2">
+                <Label htmlFor="bankAccountName">
+                  Account Name *
+                </Label>
 
-        <Input
-          id="bankName"
-          type="text"
-          value={bankName}
-          onChange={(e) => setBankName(e.target.value)}
-          placeholder="e.g. ASB Bank"
-        />
-      </div>
+                <Input
+                  id="bankAccountName"
+                  type="text"
+                  value={bankAccountName}
+                  onChange={(e) =>
+                    setBankAccountName(e.target.value)
+                  }
+                  placeholder="Enter account name"
+                />
+              </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="bankAccountName">
-          Account Name
-        </Label>
+              {/* Account Number */}
+              <div className="space-y-2">
+                <Label htmlFor="bankAccountNumber">
+                  Account Number *
+                </Label>
 
-        <Input
-          id="bankAccountName"
-          type="text"
-          value={bankAccountName}
-          onChange={(e) => setBankAccountName(e.target.value)}
-          placeholder="Enter account name"
-        />
-      </div>
+                <Input
+                  id="bankAccountNumber"
+                  type="text"
+                  value={bankAccountNumber}
+                  onChange={(e) =>
+                    setBankAccountNumber(e.target.value)
+                  }
+                  placeholder="e.g. 12-3456-1234567-00"
+                />
+              </div>
+            </div>
+          </section>
 
-      <div className="space-y-2">
-        <Label htmlFor="bankAccountNumber">
-          Account Number
-        </Label>
+          {/* Save */}
+          <div className="flex justify-end">
+            <Button
+              type="submit"
+              disabled={saving}
+              className="min-w-48"
+            >
+              <SaveIcon className="mr-2 size-4" />
 
-        <Input
-          id="bankAccountNumber"
-          type="text"
-          value={bankAccountNumber}
-          onChange={(e) =>
-            setBankAccountNumber(e.target.value)
-          }
-          placeholder="e.g. 12-3456-1234567-00"
-        />
-      </div>
-
-    </div>
-  </div>
-
-
-  {/* Messages */}
-  {errorMessage && (
-    <p className="text-sm text-destructive">
-      {errorMessage}
-    </p>
-  )}
-
-  {message && (
-    <p className="text-sm text-green-600">
-      {message}
-    </p>
-  )}
-
-
-  {/* Save */}
-  <div className="flex justify-end border-t pt-6">
-    <Button type="submit" disabled={saving}>
-      <SaveIcon className="mr-2 size-4" />
-
-      {saving
-        ? "Saving..."
-        : "Save Business Profile"}
-    </Button>
-  </div>
-
-</form>
+              {saving
+                ? "Saving..."
+                : "Save Business Profile"}
+            </Button>
+          </div>
+        </form>
       </div>
     </div>
   )

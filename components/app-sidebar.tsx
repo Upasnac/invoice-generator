@@ -24,7 +24,19 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
-const navMain = [
+const basicNav = [
+  {
+    title: "Dashboard",
+    url: "/dashboard",
+    icon: LayoutDashboardIcon,
+  },
+  {
+    title: "Business Profile",
+    url: "/settings",
+    icon: Settings2Icon,
+  },
+]
+const fullNav = [
   {
     title: "Dashboard",
     url: "/dashboard",
@@ -48,6 +60,8 @@ const navMain = [
 ]
 
 
+
+
 export function AppSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
@@ -55,6 +69,7 @@ export function AppSidebar({
   const supabase = createClient()
 const [userName, setUserName] = React.useState("")
 const [userEmail, setUserEmail] = React.useState("")
+const [hasBusiness, setHasBusiness] = React.useState(false)
 
 React.useEffect(() => {
   const loadUser = async () => {
@@ -62,14 +77,26 @@ React.useEffect(() => {
       data: { user },
     } = await supabase.auth.getUser()
 
-    if (user) {
-      setUserName(user.user_metadata?.full_name || "User")
-      setUserEmail(user.email || "")
-    }
+    if (!user) return
+
+    setUserName(
+      user.user_metadata?.full_name || "User"
+    )
+
+    setUserEmail(user.email || "")
+
+    const { data: business } = await supabase
+      .from("businesses")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle()
+
+    setHasBusiness(!!business)
   }
 
   loadUser()
 }, [])
+
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -104,8 +131,7 @@ React.useEffect(() => {
 </SidebarHeader>
 
       <SidebarContent>
-        <NavMain items={navMain} />
-      </SidebarContent>
+<NavMain items={hasBusiness ? fullNav : basicNav} />      </SidebarContent>
 
       <SidebarFooter className="border-t p-3">
 
