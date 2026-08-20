@@ -367,7 +367,7 @@ if (
               onChange={(e) =>
                 setReference(e.target.value)
               }
-              placeholder="Green Dog"
+              placeholder="Reference"
             />
           </div>
         </div>
@@ -411,7 +411,7 @@ if (
                           e.target.value
                         )
                       }
-                      placeholder="Crispy Chicken Wrap"
+                      placeholder="Description"
                     />
                   </div>
 
