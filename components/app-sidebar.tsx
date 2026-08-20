@@ -1,18 +1,18 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
+import * as React from "react";
+import Link from "next/link";
+import { useRouter, usePathname } from "next/navigation";
 import {
   FileTextIcon,
   LayoutDashboardIcon,
   LogOutIcon,
   Settings2Icon,
   UsersIcon,
-} from "lucide-react"
+} from "lucide-react";
 
-import { createClient } from "@/lib/supabase/client"
-import { NavMain } from "@/components/nav-main"
+import { createClient } from "@/lib/supabase/client";
+import { NavMain } from "@/components/nav-main";
 
 import {
   Sidebar,
@@ -22,7 +22,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 
 const basicNav = [
   {
@@ -35,7 +35,7 @@ const basicNav = [
     url: "/settings",
     icon: Settings2Icon,
   },
-]
+];
 const fullNav = [
   {
     title: "Dashboard",
@@ -57,107 +57,93 @@ const fullNav = [
     url: "/settings",
     icon: Settings2Icon,
   },
-]
+];
 
+export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const router = useRouter();
+  const supabase = createClient();
+  const pathname = usePathname();
+  const [userName, setUserName] = React.useState("");
+  const [userEmail, setUserEmail] = React.useState("");
+  const [hasBusiness, setHasBusiness] = React.useState(false);
 
+  React.useEffect(() => {
+    const loadUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
+      if (!user) return;
 
-export function AppSidebar({
-  ...props
-}: React.ComponentProps<typeof Sidebar>) {
-  const router = useRouter()
-  const supabase = createClient()
-const [userName, setUserName] = React.useState("")
-const [userEmail, setUserEmail] = React.useState("")
-const [hasBusiness, setHasBusiness] = React.useState(false)
+      setUserName(user.user_metadata?.full_name || "User");
 
-React.useEffect(() => {
-  const loadUser = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+      setUserEmail(user.email || "");
 
-    if (!user) return
+      const { data: business } = await supabase
+        .from("businesses")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
 
-    setUserName(
-      user.user_metadata?.full_name || "User"
-    )
+      setHasBusiness(!!business);
+    };
 
-    setUserEmail(user.email || "")
-
-    const { data: business } = await supabase
-      .from("businesses")
-      .select("id")
-      .eq("user_id", user.id)
-      .maybeSingle()
-
-    setHasBusiness(!!business)
-  }
-
-  loadUser()
-}, [])
-
+    loadUser();
+  }, [pathname]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
+    await supabase.auth.signOut();
 
-    router.push("/login")
-    router.refresh()
-  }
+    router.push("/login");
+    router.refresh();
+  };
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
-   <SidebarHeader>
-  <SidebarMenu>
-    <SidebarMenuItem>
-      <Link
-        href="/dashboard"
-        className="flex items-center gap-3 rounded-md px-3 py-2 hover:bg-sidebar-accent"
-      >
-        <FileTextIcon className="size-5" />
+      <SidebarHeader>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-3 rounded-md px-3 py-2 hover:bg-sidebar-accent"
+            >
+              <FileTextIcon className="size-5" />
 
-        <div className="flex flex-col">
-          <span className="font-semibold">
-            Invoice Generator
-          </span>
+              <div className="flex flex-col">
+                <span className="font-semibold">Invoice Generator</span>
 
-          <span className="text-xs text-muted-foreground">
-            Invoice Manager
-          </span>
-        </div>
-      </Link>
-    </SidebarMenuItem>
-  </SidebarMenu>
-</SidebarHeader>
+                <span className="text-xs text-muted-foreground">
+                  Invoice Manager
+                </span>
+              </div>
+            </Link>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
 
       <SidebarContent>
-<NavMain items={hasBusiness ? fullNav : basicNav} />      </SidebarContent>
+        <NavMain items={hasBusiness ? fullNav : basicNav} />{" "}
+      </SidebarContent>
 
       <SidebarFooter className="border-t p-3">
+        <div className="mb-2 px-3">
+          <p className="text-sm font-semibold">{userName}</p>
 
-  <div className="mb-2 px-3">
-    <p className="text-sm font-semibold">
-      {userName}
-    </p>
+          <p className="truncate text-xs text-muted-foreground">{userEmail}</p>
+        </div>
 
-    <p className="truncate text-xs text-muted-foreground">
-      {userEmail}
-    </p>
-  </div>
-
-  <SidebarMenu>
-    <SidebarMenuItem>
-      <SidebarMenuButton
-        onClick={handleLogout}
-        className="h-10 w-full gap-3 px-3"
-      >
-        <LogOutIcon className="size-4" />
-        <span>Logout</span>
-      </SidebarMenuButton>
-    </SidebarMenuItem>
-  </SidebarMenu>
-
-</SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={handleLogout}
+              className="h-10 w-full gap-3 px-3"
+            >
+              <LogOutIcon className="size-4" />
+              <span>Logout</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
-  )
+  );
 }

@@ -7,9 +7,11 @@ import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useRouter } from "next/navigation"
 
 export default function SettingsPage() {
   const supabase = createClient()
+  const router = useRouter()
 
   const [businessName, setBusinessName] = useState("")
   const [email, setEmail] = useState("")
@@ -223,12 +225,11 @@ export default function SettingsPage() {
     setMessage("Business profile saved successfully.")
     setSaving(false)
 
-    setTimeout(() => {
-      window.scrollTo({
-        top: 0,
-        behavior: "smooth",
-      })
-    }, 100)
+   setTimeout(() => {
+  router.push("/dashboard")
+  router.refresh()
+}, 1000)
+
   }
 
   if (loading) {

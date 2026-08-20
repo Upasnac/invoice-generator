@@ -1,62 +1,59 @@
-"use client"
-import { useState } from "react"
-import Link from "next/link"
-import { createClient } from "@/lib/supabase/client"
-import { useRouter } from "next/navigation"
-import { Button, buttonVariants} from "@/components/ui/button"
+"use client";
+import { useState } from "react";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function SignupPage() {
-  const supabase = createClient()
-  const router = useRouter()
-  
-const [name, setName] = useState("")
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [message, setMessage] = useState("")
-  const [loading, setLoading] = useState(false)
-const [signupSuccess, setSignupSuccess] = useState(false)
+  const supabase = createClient();
+  const router = useRouter();
+
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [signupSuccess, setSignupSuccess] = useState(false);
 
   const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setMessage("")
+    e.preventDefault();
+    setMessage("");
 
     if (password !== confirmPassword) {
-      setMessage("Passwords do not match.")
-      return
+      setMessage("Passwords do not match.");
+      return;
     }
 
-    setLoading(true)
-const { error } = await supabase.auth.signUp({
-  email,
-  password,
-  options: {
-    data: {
-      full_name: name,
-    },
-  },
-})
+    setLoading(true);
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: name,
+        },
+      },
+    });
     if (error) {
-      setMessage(error.message)
-      setLoading(false)
-      return
+      setMessage(error.message);
+      setLoading(false);
+      return;
     }
-setMessage(
-  "Account created. Please check your email to confirm your account, then log in."
-)
-setSignupSuccess(true)
-setLoading(false)
-
-  }
+    setMessage("Account created successfully. You can now log in.");
+    setSignupSuccess(true);
+    setLoading(false);
+  };
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-muted/40 px-4">
@@ -71,17 +68,17 @@ setLoading(false)
         <CardContent>
           <form onSubmit={handleSignup} className="space-y-5">
             <div className="space-y-2">
-  <Label htmlFor="name">Full Name</Label>
+              <Label htmlFor="name">Full Name</Label>
 
-  <Input
-    id="name"
-    type="text"
-    placeholder="Enter your full name"
-    value={name}
-    onChange={(e) => setName(e.target.value)}
-    required
-  />
-</div>
+              <Input
+                id="name"
+                type="text"
+                placeholder="Enter your full name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
 
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -121,36 +118,32 @@ setLoading(false)
               />
             </div>
 
-         {message && (
-  <div
-    className={`rounded-lg border px-4 py-3 text-sm ${
-      signupSuccess
-        ? "border-green-200 bg-green-50 text-green-700"
-        : "border-red-200 bg-red-50 text-red-700"
-    }`}
-  >
-    {message}
-  </div>
-)}
+            {message && (
+              <div
+                className={`rounded-lg border px-4 py-3 text-sm ${
+                  signupSuccess
+                    ? "border-green-200 bg-green-50 text-green-700"
+                    : "border-red-200 bg-red-50 text-red-700"
+                }`}
+              >
+                {message}
+              </div>
+            )}
 
-          {!signupSuccess ? (
-  <Button
-    type="submit"
-    className="w-full"
-    disabled={loading}
-  >
-    {loading ? "Creating account..." : "Create Account"}
-  </Button>
-) : (
-  <Link
-    href="/login"
-    className={buttonVariants({
-      className: "w-full",
-    })}
-  >
-    Go to Login
-  </Link>
-)}
+            {!signupSuccess ? (
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Creating account..." : "Create Account"}
+              </Button>
+            ) : (
+              <Link
+                href="/login"
+                className={buttonVariants({
+                  className: "w-full",
+                })}
+              >
+                Go to Login
+              </Link>
+            )}
 
             <p className="text-center text-sm text-muted-foreground">
               Already have an account?{" "}
@@ -165,5 +158,5 @@ setLoading(false)
         </CardContent>
       </Card>
     </main>
-  )
+  );
 }

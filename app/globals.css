@@ -138,68 +138,66 @@
 
   .invoice-print-area {
     width: 190mm !important;
-    min-height: auto !important;
     max-width: 190mm !important;
+    min-height: auto !important;
 
     margin: 0 auto !important;
-    padding: 8mm !important;
+    padding: 6mm 8mm !important;
 
     box-shadow: none !important;
     border: none !important;
 
-    font-size: 11px !important;
-  }
-
-  .invoice-print-area h1 {
-    font-size: 24px !important;
-  }
-
-  .invoice-print-area h2 {
-    font-size: 26px !important;
-  }
-
-  .invoice-print-area h3 {
-    font-size: 14px !important;
-  }
-
-  .invoice-print-area table {
     font-size: 10px !important;
   }
 
-  .invoice-print-area p {
-    margin-top: 2px !important;
-    margin-bottom: 2px !important;
+  .invoice-print-area h1 {
+    font-size: 22px !important;
   }
 
-  .invoice-print-area section,
-  .invoice-print-area .mt-12 {
-    margin-top: 16px !important;
+  .invoice-print-area h2 {
+    font-size: 24px !important;
   }
 
-  .invoice-print-area .mt-8 {
-    margin-top: 12px !important;
+  .invoice-print-area h3 {
+    font-size: 13px !important;
+  }
+
+  .invoice-print-area table {
+    font-size: 9px !important;
   }
 
   .invoice-print-area .py-8 {
-    padding-top: 12px !important;
-    padding-bottom: 12px !important;
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+  }
+
+  .invoice-print-area .mt-12 {
+    margin-top: 12px !important;
+  }
+
+  .invoice-print-area .mt-8 {
+    margin-top: 10px !important;
+  }
+
+  .invoice-print-area .mt-6 {
+    margin-top: 8px !important;
+  }
+
+  .invoice-print-area p {
+    margin-top: 1px !important;
+    margin-bottom: 1px !important;
+  }
+
+  .invoice-meta {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 15mm !important;
+    align-items: start !important;
   }
 
   @page {
     size: A4 portrait;
-    margin: 5mm;
-  }
-    .invoice-meta {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
-    gap: 20mm !important;
-    align-items: start !important;
-  }
-
-  .invoice-meta > div:last-child {
-    width: 100% !important;
-    max-width: none !important;
-    margin-left: 0 !important;
+    margin: 4mm;
   }
 }
 h1,
