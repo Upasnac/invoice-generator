@@ -78,13 +78,13 @@ export default function HomePage() {
             </h1>
 
             <p className="mt-6 max-w-xl text-lg leading-8 text-muted-foreground">
-              <p className="mt-6 max-w-xl text-lg leading-8 text-muted-foreground">
+          
   Create invoices, manage customers, calculate GST,
   track payments and generate professional PDFs
   from one simple dashboard — with a flexible setup
   that can adapt to your business requirements.
 </p>
-            </p>
+            
 
             {/* Dynamic Auth Buttons */}
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
