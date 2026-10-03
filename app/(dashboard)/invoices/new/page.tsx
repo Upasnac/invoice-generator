@@ -38,7 +38,7 @@ export default function NewInvoicePage() {
 
   const [gstRate, setGstRate] = useState(15);
   const [gstIncluded, setGstIncluded] = useState(true);
-
+const [status, setStatus] = useState<"paid" | "unpaid">("unpaid");
   const [notes, setNotes] = useState("");
   const [paymentNotes, setPaymentNotes] = useState("");
 
@@ -95,36 +95,39 @@ export default function NewInvoicePage() {
     setBusinessId(business.id);
 
     const { data: customerData } = await supabase
-      .from("customers")
-      .select("id, name, company_name")
-      .eq("business_id", business.id)
-      .order("name");
+  .from("customers")
+  .select("id, name, company_name")
+  .eq("business_id", business.id)
+  .order("name")
 
-    setCustomers(customerData || []);
+setCustomers(customerData || [])
 
-    const today = new Date();
-    const dateString = today.toISOString().split("T")[0];
+const getLocalDate = (daysToAdd = 0) => {
+  const date = new Date()
 
-    setInvoiceDate(dateString);
+  date.setDate(date.getDate() + daysToAdd)
 
-    const due = new Date();
-    due.setDate(due.getDate() + 7);
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
 
-    setDueDate(due.toISOString().split("T")[0]);
+  return `${year}-${month}-${day}`
+}
 
-    const { data: nextNumber, error: numberError } = await supabase.rpc(
-      "get_next_invoice_number",
-      {
-        p_business_id: business.id,
-      },
-    );
+setInvoiceDate(getLocalDate())
+setDueDate(getLocalDate(7))
 
-    if (numberError) {
-      showError(numberError.message);
-      return;
-    }
+const { data: nextNumber, error: numberError } =
+  await supabase.rpc("get_next_invoice_number", {
+    p_business_id: business.id,
+  })
 
-    setInvoiceNumber(nextNumber || "");
+if (numberError) {
+  showError(numberError.message)
+  return
+}
+
+setInvoiceNumber(nextNumber || "")
   };
 
   const updateItem = (
@@ -249,7 +252,7 @@ export default function NewInvoicePage() {
         discount: 0,
         total,
 
-        status: "draft",
+        status: status,
         notes: notes.trim() || null,
         payment_notes: paymentNotes.trim() || null,
       })
@@ -435,7 +438,7 @@ export default function NewInvoicePage() {
                       onChange={(e) =>
                         updateItem(index, "description", e.target.value)
                       }
-                      placeholder="e.g. Fresh Milk Original"
+                      placeholder="Description of items"
                     />
                   </div>
 
@@ -452,7 +455,7 @@ export default function NewInvoicePage() {
                       onChange={(e) =>
                         updateItem(index, "quantity", e.target.value)
                       }
-                      placeholder="e.g. 14"
+                      placeholder="quantity"
                     />
                   </div>
 
@@ -469,7 +472,7 @@ export default function NewInvoicePage() {
                       onChange={(e) =>
                         updateItem(index, "unit_price", e.target.value)
                       }
-                      placeholder="e.g. 5.50"
+                      placeholder="price of item"
                     />
                   </div>
 
@@ -526,6 +529,39 @@ export default function NewInvoicePage() {
             <Label htmlFor="gstIncluded">Prices include GST</Label>
           </div>
         </div>
+
+        {/* Payment Status */}
+
+<div className="rounded-xl border p-6">
+  <Label className="mb-4 block">Payment Status</Label>
+
+  <div className="flex items-center gap-8">
+    <label className="flex cursor-pointer items-center gap-2">
+      <input
+        type="radio"
+        name="status"
+        value="unpaid"
+        checked={status === "unpaid"}
+        onChange={() => setStatus("unpaid")}
+        className="size-4"
+      />
+      <span>Unpaid</span>
+    </label>
+
+    <label className="flex cursor-pointer items-center gap-2">
+      <input
+        type="radio"
+        name="status"
+        value="paid"
+        checked={status === "paid"}
+        onChange={() => setStatus("paid")}
+        className="size-4"
+      />
+      <span>Paid</span>
+    </label>
+  </div>
+</div>
+
 
         {/* Totals */}
 

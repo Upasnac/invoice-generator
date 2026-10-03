@@ -10,10 +10,7 @@ import {
 } from "lucide-react"
 
 import { createClient } from "@/lib/supabase/client"
-import {
-  Button,
-  buttonVariants,
-} from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 
 import {
   Table,
@@ -30,6 +27,7 @@ type Invoice = {
   invoice_date: string
   due_date: string | null
   total: number
+  status: "paid" | "unpaid"
 
   customers: {
     name: string
@@ -63,19 +61,16 @@ export default function InvoicesPage() {
     }
 
     // Find logged-in user's business
-    const { data: business, error: businessError } =
-      await supabase
-        .from("businesses")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle()
+    const { data: business, error: businessError } = await supabase
+      .from("businesses")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle()
 
     if (businessError || !business) {
       setMessage(
-        businessError?.message ||
-          "Business profile not found."
+        businessError?.message || "Business profile not found."
       )
-
       setLoading(false)
       return
     }
@@ -89,6 +84,7 @@ export default function InvoicesPage() {
         invoice_date,
         due_date,
         total,
+        status,
         customers (
           name,
           company_name
@@ -103,9 +99,7 @@ export default function InvoicesPage() {
       setMessage(error.message)
       setInvoices([])
     } else {
-      setInvoices(
-        (data ?? []) as unknown as Invoice[]
-      )
+      setInvoices((data ?? []) as unknown as Invoice[])
     }
 
     setLoading(false)
@@ -147,9 +141,7 @@ export default function InvoicesPage() {
       day: "2-digit",
       month: "short",
       year: "numeric",
-    }).format(
-      new Date(`${date}T00:00:00`)
-    )
+    }).format(new Date(`${date}T00:00:00`))
   }
 
   return (
@@ -187,25 +179,17 @@ export default function InvoicesPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>
-                Invoice #
-              </TableHead>
+              <TableHead>Invoice #</TableHead>
 
-              <TableHead>
-                Customer
-              </TableHead>
+              <TableHead>Customer</TableHead>
 
-              <TableHead>
-                Invoice Date
-              </TableHead>
+              <TableHead>Invoice Date</TableHead>
 
-              <TableHead>
-                Due Date
-              </TableHead>
+              <TableHead>Due Date</TableHead>
 
-              <TableHead>
-                Total
-              </TableHead>
+              <TableHead>Total</TableHead>
+
+              <TableHead>Status</TableHead>
 
               <TableHead className="text-right">
                 Actions
@@ -217,7 +201,7 @@ export default function InvoicesPage() {
             {loading ? (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={7}
                   className="h-28 text-center text-muted-foreground"
                 >
                   Loading invoices...
@@ -226,7 +210,7 @@ export default function InvoicesPage() {
             ) : invoices.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={7}
                   className="h-28 text-center"
                 >
                   <div className="flex flex-col items-center gap-3">
@@ -241,7 +225,6 @@ export default function InvoicesPage() {
                       })}
                     >
                       <PlusIcon className="mr-2 size-4" />
-
                       Create your first invoice
                     </Link>
                   </div>
@@ -250,34 +233,49 @@ export default function InvoicesPage() {
             ) : (
               invoices.map((invoice) => (
                 <TableRow key={invoice.id}>
+                  {/* Invoice Number */}
                   <TableCell className="font-semibold">
                     {invoice.invoice_number}
                   </TableCell>
 
+                  {/* Customer */}
                   <TableCell>
                     {invoice.customers?.company_name ||
                       invoice.customers?.name ||
                       "—"}
                   </TableCell>
 
+                  {/* Invoice Date */}
                   <TableCell>
-                    {formatDate(
-                      invoice.invoice_date
-                    )}
+                    {formatDate(invoice.invoice_date)}
                   </TableCell>
 
+                  {/* Due Date */}
                   <TableCell>
-                    {formatDate(
-                      invoice.due_date
-                    )}
+                    {formatDate(invoice.due_date)}
                   </TableCell>
 
+                  {/* Total */}
                   <TableCell className="font-medium">
-                    {formatMoney(
-                      invoice.total
-                    )}
+                    {formatMoney(invoice.total)}
                   </TableCell>
 
+                  {/* Payment Status */}
+                  <TableCell>
+                    <span
+                      className={
+                        invoice.status === "paid"
+                          ? "inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700"
+                          : "inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700"
+                      }
+                    >
+                      {invoice.status === "paid"
+                        ? "Paid"
+                        : "Unpaid"}
+                    </span>
+                  </TableCell>
+
+                  {/* Actions */}
                   <TableCell>
                     <div className="flex justify-end gap-2">
                       {/* View */}
@@ -311,9 +309,7 @@ export default function InvoicesPage() {
                         size="icon"
                         title="Delete invoice"
                         onClick={() =>
-                          handleDelete(
-                            invoice.id
-                          )
+                          handleDelete(invoice.id)
                         }
                       >
                         <Trash2Icon className="size-4" />
